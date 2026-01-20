@@ -200,13 +200,13 @@ def create_line_chart_matplotlib(df_filtered):
     dates_list = sorted(data_table.columns)
     
     # Create figure with subplots
-    fig = plt.figure(figsize=(14, 10))
+    fig = plt.figure(figsize=(16, 11))
     
-    # Chart axes
-    ax_chart = plt.subplot2grid((3, 1), (0, 0), rowspan=2)
+    # Chart axes - larger space
+    ax_chart = plt.subplot2grid((4, 1), (0, 0), rowspan=3)
     
     # Table axes
-    ax_table = plt.subplot2grid((3, 1), (2, 0))
+    ax_table = plt.subplot2grid((4, 1), (3, 0))
     
     # Colors
     colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', 
@@ -214,47 +214,68 @@ def create_line_chart_matplotlib(df_filtered):
     
     all_coupons = sorted(df_filtered['CpnNm'].unique())
     
+    # Find max for Y range
+    max_qty = daily_trend['Qty'].max()
+    y_max = max_qty * 1.25  # Extra space for labels
+    
     # Plot lines
     for i, coupon in enumerate(all_coupons):
         coupon_data = daily_trend[daily_trend['CpnNm'] == coupon]
         
-        ax_chart.plot(
+        # Plot line
+        line = ax_chart.plot(
             coupon_data['SaleDy'], 
             coupon_data['Qty'],
             marker='o',
             linewidth=2.5,
             markersize=8,
             color=colors[i % len(colors)],
-            label=coupon
-        )
+            label=coupon,
+            zorder=3  # Lines on top
+        )[0]
         
-        # Add data labels
+        # Add data labels with white background to avoid overlap
         for idx, row in coupon_data.iterrows():
-            ax_chart.text(
-                row['SaleDy'], 
-                row['Qty'], 
+            # Determine position
+            if row['Qty'] > (max_qty * 0.75):
+                va = 'bottom'
+                offset = 15
+            else:
+                va = 'top'
+                offset = -15
+            
+            # Add label with white bbox
+            ax_chart.annotate(
                 f"{int(row['Qty'])}", 
+                xy=(row['SaleDy'], row['Qty']),
+                xytext=(0, offset),
+                textcoords='offset points',
                 fontsize=10,
                 fontweight='bold',
                 color=colors[i % len(colors)],
                 ha='center',
-                va='bottom' if row['Qty'] > daily_trend['Qty'].max() * 0.7 else 'top'
+                va=va,
+                bbox=dict(
+                    boxstyle='round,pad=0.3',
+                    facecolor='white',
+                    edgecolor='none',
+                    alpha=0.8
+                ),
+                zorder=4  # Labels on top of everything
             )
     
     # Chart formatting
     ax_chart.set_title('RESULT PROMO NEW MEMBER & DORMANT\nBY COUPON USAGE (ALL STORE)', 
-                       fontsize=14, fontweight='bold', pad=20)
-    ax_chart.set_ylabel('Quantity', fontsize=12, fontweight='bold')
-    ax_chart.grid(True, alpha=0.3)
+                       fontsize=16, fontweight='bold', pad=20)
+    ax_chart.set_ylabel('Quantity', fontsize=13, fontweight='bold')
+    ax_chart.set_ylim(0, y_max)
+    ax_chart.grid(True, alpha=0.3, zorder=1)
     ax_chart.legend(loc='upper left', bbox_to_anchor=(1.01, 1), fontsize=9)
     
-    # Format x-axis
+    # Format x-axis with dates VISIBLE
     ax_chart.xaxis.set_major_formatter(mdates.DateFormatter('%d-%b'))
-    ax_chart.tick_params(axis='x', rotation=45)
-    
-    # Remove x-axis labels from chart (will show in table)
-    ax_chart.set_xticklabels([])
-    ax_chart.set_xlabel('')
+    ax_chart.tick_params(axis='x', rotation=45, labelsize=10)
+    ax_chart.set_xlabel('Date', fontsize=12, fontweight='bold')
     
     # Prepare table data
     table_data = []
@@ -274,19 +295,19 @@ def create_line_chart_matplotlib(df_filtered):
         colLabels=col_labels,
         cellLoc='center',
         loc='center',
-        colWidths=[0.3] + [0.7/len(dates_list)] * len(dates_list)
+        colWidths=[0.25] + [0.75/len(dates_list)] * len(dates_list)
     )
     
     # Style table
     table.auto_set_font_size(False)
     table.set_fontsize(9)
-    table.scale(1, 2)
+    table.scale(1, 2.5)
     
     # Header styling
     for i in range(len(col_labels)):
         cell = table[(0, i)]
         cell.set_facecolor('#AFEEEE')
-        cell.set_text_props(weight='bold')
+        cell.set_text_props(weight='bold', fontsize=10)
     
     # Row styling (alternating colors)
     for i in range(len(table_data)):
@@ -300,8 +321,8 @@ def create_line_chart_matplotlib(df_filtered):
     # Remove table axes
     ax_table.axis('off')
     
-    # Adjust layout
-    plt.tight_layout()
+    # Adjust layout with more space
+    plt.subplots_adjust(left=0.08, right=0.85, top=0.95, bottom=0.05, hspace=0.3)
     
     # Save to BytesIO
     buf = BytesIO()
