@@ -94,8 +94,16 @@ def create_line_chart(df_filtered):
     for date in dates_list:
         table_values.append(data_table[date].tolist())
     
-    # Create figure
-    fig = go.Figure()
+    # Create subplots with LEFT legend positioning
+    from plotly.subplots import make_subplots
+    
+    fig = make_subplots(
+        rows=2, cols=1,
+        row_heights=[0.60, 0.40],
+        subplot_titles=('', ''),
+        specs=[[{'type': 'scatter'}], [{'type': 'table'}]],
+        vertical_spacing=0.02  # Minimal spacing
+    )
     
     # Colors
     colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', 
@@ -131,13 +139,11 @@ def create_line_chart(df_filtered):
                 color=colors[i % len(colors)],
                 family='Arial Black, sans-serif'
             ),
-            yaxis='y1',
-            xaxis='x1',
             hovertemplate='<b>%{fullData.name}</b><br>' +
                           'Date: %{x|%d-%b-%Y}<br>' +
                           'Quantity: %{y:,.0f}<br>' +
                           '<extra></extra>'
-        ))
+        ), row=1, col=1)
     
     # Alternating row colors
     num_coupons = len(all_coupons)
@@ -146,9 +152,10 @@ def create_line_chart(df_filtered):
         row_color = 'white' if i % 2 == 0 else 'lightgray'
         fill_colors.append([row_color] * (num_dates + 1))
     
-    # Column widths
-    coupon_name_width = 180
-    date_col_width = 70
+    # Column widths - SAMA dengan chart width
+    # Legend di kiri akan mengambil space, jadi table column lebih lebar
+    coupon_name_width = 250  # Lebih lebar untuk match legend width
+    date_col_width = 80
     table_col_widths = [coupon_name_width] + [date_col_width] * num_dates
     
     # Add table
@@ -168,10 +175,37 @@ def create_line_chart(df_filtered):
             height=28
         ),
         columnwidth=table_col_widths,
-        domain=dict(x=[0, 1], y=[0, 0.32])
-    ))
+        domain=dict(x=[0.18, 1], y=[0, 0.38])  # Start from 0.18 (same as chart)
+    ), row=2, col=1)
     
-    # Layout
+    # Update x-axis
+    fig.update_xaxes(
+        title='',  # No title to avoid overlap
+        tickformat='%d-%b',
+        tickmode='array',
+        tickvals=dates_list,
+        ticktext=[date.strftime('%d-%b') for date in dates_list],
+        tickangle=-45,
+        showgrid=True,
+        gridcolor='lightgray',
+        gridwidth=0.5,
+        domain=[0.18, 1],  # Chart starts from 0.18 (after legend)
+        anchor='y1',
+        row=1, col=1
+    )
+    
+    # Update y-axis
+    fig.update_yaxes(
+        title='<b>Quantity</b>',
+        showgrid=True,
+        gridcolor='lightgray',
+        gridwidth=0.5,
+        tickformat=',',
+        range=[0, y_range_max],
+        row=1, col=1
+    )
+    
+    # Layout with LEGEND on LEFT
     fig.update_layout(
         title=dict(
             text='<b>RESULT PROMO NEW MEMBER & DORMANT</b><br><sub>BY COUPON USAGE (ALL STORE)</sub>',
@@ -180,38 +214,15 @@ def create_line_chart(df_filtered):
             font=dict(size=16),
             y=0.98
         ),
-        xaxis=dict(
-            title='<b>Date</b>',
-            tickformat='%d-%b',
-            tickmode='array',
-            tickvals=dates_list,
-            ticktext=[date.strftime('%d-%b') for date in dates_list],
-            tickangle=-45,
-            showgrid=True,
-            gridcolor='lightgray',
-            gridwidth=0.5,
-            domain=[0, 1],
-            anchor='y1'
-        ),
-        yaxis=dict(
-            title='<b>Quantity</b>',
-            showgrid=True,
-            gridcolor='lightgray',
-            gridwidth=0.5,
-            tickformat=',',
-            range=[0, y_range_max],
-            domain=[0.40, 0.95],
-            anchor='x1'
-        ),
         hovermode='x unified',
-        height=950,
+        height=900,
         showlegend=True,
         legend=dict(
-            orientation='v',
-            yanchor='middle',
-            y=0.65,
+            orientation='v',      # Vertical
+            yanchor='top',
+            y=0.95,              # Top of chart
             xanchor='left',
-            x=1.02,
+            x=0.01,              # LEFT side
             font=dict(size=9),
             bgcolor='rgba(255,255,255,0.9)',
             bordercolor='gray',
@@ -219,7 +230,19 @@ def create_line_chart(df_filtered):
         ),
         plot_bgcolor='white',
         font=dict(family='Arial', size=11),
-        margin=dict(t=80, b=50, l=60, r=200)
+        margin=dict(t=80, b=80, l=60, r=40),  # Bottom margin untuk Date label
+        xaxis_title_standoff=25  # Space untuk Date label
+    )
+    
+    # Add Date label manually below chart
+    fig.add_annotation(
+        text='<b>Date</b>',
+        xref='paper',
+        yref='paper',
+        x=0.59,  # Center between 0.18 and 1.0
+        y=0.36,  # Below chart, above table
+        showarrow=False,
+        font=dict(size=12, family='Arial')
     )
     
     return fig
