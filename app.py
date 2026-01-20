@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 from io import BytesIO
 import base64
+import matplotlib.gridspec as gridspec
 
 # Page config
 st.set_page_config(
@@ -82,6 +83,21 @@ def create_line_chart_plotly(df_filtered):
     
     fig = go.Figure()
     
+    # Add weekend shading first (background)
+    dates_list = sorted(daily_trend['SaleDy'].unique())
+    for date in dates_list:
+        if date.weekday() >= 5:  # Saturday or Sunday
+            fig.add_vrect(
+                x0=date - pd.Timedelta(hours=12),
+                x1=date + pd.Timedelta(hours=12),
+                fillcolor="lightblue",
+                opacity=0.2,
+                layer="below",
+                line_width=0,
+                annotation_text="Weekend" if date == dates_list[0] or (date.weekday() == 5 and all(d.weekday() < 5 for d in dates_list if d < date)) else "",
+                annotation_position="top left"
+            )
+    
     colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', 
               '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
     
@@ -122,10 +138,10 @@ def create_line_chart_plotly(df_filtered):
     
     fig.update_layout(
         title=dict(
-            text='<b>RESULT PROMO NEW MEMBER & DORMANT</b><br><sub>BY COUPON USAGE (ALL STORE)</sub>',
+            text='<b>Total Coupons Redeemed</b>',
             x=0.5,
             xanchor='center',
-            font=dict(size=16)
+            font=dict(size=18, color='#1f77b4')
         ),
         xaxis=dict(
             title='<b>Date</b>',
@@ -199,11 +215,10 @@ def create_line_chart_matplotlib(df_filtered):
     
     dates_list = sorted(data_table.columns)
     
-    # Create figure with MORE vertical space
+    # Create figure
     fig = plt.figure(figsize=(16, 12))
     
     # Use GridSpec for better control
-    import matplotlib.gridspec as gridspec
     gs = gridspec.GridSpec(2, 1, figure=fig, height_ratios=[2, 1], hspace=0.4)
     
     # Chart axes
@@ -220,7 +235,21 @@ def create_line_chart_matplotlib(df_filtered):
     
     # Find max for Y range
     max_qty = daily_trend['Qty'].max()
-    y_max = max_qty * 1.3  # Extra 30% space for labels
+    y_max = max_qty * 1.3
+    
+    # Add weekend shading FIRST (background)
+    weekend_added = False
+    for date in dates_list:
+        if date.weekday() >= 5:  # Saturday or Sunday
+            ax_chart.axvspan(
+                date - pd.Timedelta(hours=12), 
+                date + pd.Timedelta(hours=12),
+                alpha=0.15,
+                color='#87CEEB',
+                zorder=0,
+                label='Weekend' if not weekend_added else ''
+            )
+            weekend_added = True
     
     # Plot lines
     for i, coupon in enumerate(all_coupons):
@@ -272,8 +301,8 @@ def create_line_chart_matplotlib(df_filtered):
             )
     
     # Chart formatting
-    ax_chart.set_title('RESULT PROMO NEW MEMBER & DORMANT\nBY COUPON USAGE (ALL STORE)', 
-                       fontsize=16, fontweight='bold', pad=15)
+    ax_chart.set_title('Total Coupons Redeemed', 
+                       fontsize=18, fontweight='bold', pad=15, color='#1f77b4')
     ax_chart.set_ylabel('Quantity', fontsize=13, fontweight='bold')
     ax_chart.set_ylim(0, y_max)
     ax_chart.grid(True, alpha=0.3, zorder=1, linestyle='--')
@@ -299,7 +328,7 @@ def create_line_chart_matplotlib(df_filtered):
     # Column labels
     col_labels = ['Coupon Name'] + [date.strftime('%d-%b') for date in dates_list]
     
-    # Create table with adjusted width
+    # Create table
     table = ax_table.table(
         cellText=table_data,
         colLabels=col_labels,
@@ -469,7 +498,7 @@ def main():
         - Interactive line chart
         - Data table with daily values
         - Pivot table by store
-        - Export to Excel/CSV
+        - Export to Excel
         """)
     
     # Apply filters
@@ -547,13 +576,17 @@ def main():
                         height=400
                     )
                     
-                    # Download table
-                    csv = data_table.to_csv(index=False).encode('utf-8')
+                    # Download table as Excel
+                    output = io.BytesIO()
+                    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                        data_table.to_excel(writer, sheet_name='Daily_Data', index=False)
+                    output.seek(0)
+                    
                     st.download_button(
-                        label="📥 Download Data Table (CSV)",
-                        data=csv,
-                        file_name=f"daily_data_table_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
-                        mime="text/csv"
+                        label="📥 Download Data Table (Excel)",
+                        data=output,
+                        file_name=f"daily_data_table_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                     )
                     
                 except Exception as e:
@@ -561,7 +594,7 @@ def main():
             
             else:  # Matplotlib
                 try:
-                    st.info("💡 This version has perfect chart-table alignment, ideal for reports and presentations.")
+                    st.info("💡 This version has perfect chart-table alignment, ideal for reports and presentations. Weekend days are highlighted in light blue.")
                     
                     # MATPLOTLIB VERSION - Perfect alignment
                     img_buf = create_line_chart_matplotlib(df_filtered)
@@ -603,13 +636,17 @@ def main():
             
             st.dataframe(styled_df, use_container_width=True, height=600)
             
-            # Download button
-            csv = pivot_df.to_csv(index=False).encode('utf-8')
+            # Download button - Excel
+            output = io.BytesIO()
+            with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                pivot_df.to_excel(writer, sheet_name='Pivot_Table', index=False)
+            output.seek(0)
+            
             st.download_button(
-                label="📥 Download Pivot Table (CSV)",
-                data=csv,
-                file_name=f"pivot_table_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
-                mime="text/csv"
+                label="📥 Download Pivot Table (Excel)",
+                data=output,
+                file_name=f"pivot_table_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
     
     # Tab 3: Data Detail
@@ -628,13 +665,17 @@ def main():
             
             st.dataframe(display_df, use_container_width=True, height=600)
             
-            # Download button
-            csv = display_df.to_csv(index=False).encode('utf-8')
+            # Download button - Excel
+            output = io.BytesIO()
+            with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                display_df.to_excel(writer, sheet_name='Filtered_Data', index=False)
+            output.seek(0)
+            
             st.download_button(
-                label="📥 Download Filtered Data (CSV)",
-                data=csv,
-                file_name=f"filtered_data_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
-                mime="text/csv"
+                label="📥 Download Filtered Data (Excel)",
+                data=output,
+                file_name=f"filtered_data_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
     
     # Tab 4: Export
@@ -644,84 +685,57 @@ def main():
         if len(df_filtered) == 0:
             st.warning("No data to export with current filters")
         else:
-            st.markdown("### 📊 Available Exports")
+            st.markdown("### 📊 Excel Export (Multi-Sheet)")
+            st.info("""
+            **Includes:**
+            - Filtered Data
+            - Pivot Table (Store × Coupon)
+            - Daily Trend Summary
+            - Summary Statistics
+            """)
             
-            col1, col2 = st.columns(2)
-            
-            with col1:
-                st.markdown("#### Excel Export (Multi-Sheet)")
-                st.info("""
-                **Includes:**
-                - Filtered Data
-                - Pivot Table (Store × Coupon)
-                - Daily Trend Summary
-                - Summary Statistics
-                """)
-                
-                if st.button("🔄 Generate Excel File", type="primary"):
-                    with st.spinner("Generating Excel file..."):
-                        # Create Excel file
-                        output = io.BytesIO()
-                        with pd.ExcelWriter(output, engine='openpyxl') as writer:
-                            # Sheet 1: Filtered data
-                            df_export = df_filtered.copy()
-                            df_export['SaleDy'] = df_export['SaleDy'].dt.strftime('%Y-%m-%d')
-                            df_export.to_excel(writer, sheet_name='Filtered_Data', index=False)
-                            
-                            # Sheet 2: Pivot table
-                            pivot_df = create_pivot_table(df_filtered)
-                            pivot_df.to_excel(writer, sheet_name='Pivot_Store_Coupon', index=False)
-                            
-                            # Sheet 3: Daily trend
-                            daily_summary = df_filtered.groupby(['SaleDy', 'CpnNm'])['Qty'].sum().reset_index()
-                            daily_summary['SaleDy'] = daily_summary['SaleDy'].dt.strftime('%Y-%m-%d')
-                            daily_summary.to_excel(writer, sheet_name='Daily_Trend', index=False)
-                            
-                            # Sheet 4: Summary stats
-                            summary = pd.DataFrame({
-                                'Metric': ['Total Records', 'Total Qty', 'Unique Stores', 'Unique Coupons', 'Date Range'],
-                                'Value': [
-                                    len(df_filtered),
-                                    df_filtered['Qty'].sum(),
-                                    df_filtered['StrNm'].nunique(),
-                                    df_filtered['CpnNm'].nunique(),
-                                    f"{df_filtered['SaleDy'].min().strftime('%Y-%m-%d')} to {df_filtered['SaleDy'].max().strftime('%Y-%m-%d')}"
-                                ]
-                            })
-                            summary.to_excel(writer, sheet_name='Summary', index=False)
+            if st.button("🔄 Generate Complete Excel File", type="primary"):
+                with st.spinner("Generating Excel file..."):
+                    # Create Excel file
+                    output = io.BytesIO()
+                    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                        # Sheet 1: Filtered data
+                        df_export = df_filtered.copy()
+                        df_export['SaleDy'] = df_export['SaleDy'].dt.strftime('%Y-%m-%d')
+                        df_export.to_excel(writer, sheet_name='Filtered_Data', index=False)
                         
-                        output.seek(0)
+                        # Sheet 2: Pivot table
+                        pivot_df = create_pivot_table(df_filtered)
+                        pivot_df.to_excel(writer, sheet_name='Pivot_Store_Coupon', index=False)
                         
-                        st.download_button(
-                            label="📥 Download Excel File",
-                            data=output,
-                            file_name=f"lsi_coupon_analysis_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
-                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                        )
+                        # Sheet 3: Daily trend
+                        daily_summary = df_filtered.groupby(['SaleDy', 'CpnNm'])['Qty'].sum().reset_index()
+                        daily_summary['SaleDy'] = daily_summary['SaleDy'].dt.strftime('%Y-%m-%d')
+                        daily_summary.to_excel(writer, sheet_name='Daily_Trend', index=False)
                         
-                        st.success("✅ Excel file ready for download!")
-            
-            with col2:
-                st.markdown("#### Individual CSV Exports")
-                
-                # Filtered data
-                csv1 = df_filtered.to_csv(index=False).encode('utf-8')
-                st.download_button(
-                    label="📄 Filtered Data (CSV)",
-                    data=csv1,
-                    file_name=f"filtered_data_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
-                    mime="text/csv"
-                )
-                
-                # Pivot table
-                pivot_df = create_pivot_table(df_filtered)
-                csv2 = pivot_df.to_csv(index=False).encode('utf-8')
-                st.download_button(
-                    label="📊 Pivot Table (CSV)",
-                    data=csv2,
-                    file_name=f"pivot_table_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
-                    mime="text/csv"
-                )
+                        # Sheet 4: Summary stats
+                        summary = pd.DataFrame({
+                            'Metric': ['Total Records', 'Total Qty', 'Unique Stores', 'Unique Coupons', 'Date Range'],
+                            'Value': [
+                                len(df_filtered),
+                                df_filtered['Qty'].sum(),
+                                df_filtered['StrNm'].nunique(),
+                                df_filtered['CpnNm'].nunique(),
+                                f"{df_filtered['SaleDy'].min().strftime('%Y-%m-%d')} to {df_filtered['SaleDy'].max().strftime('%Y-%m-%d')}"
+                            ]
+                        })
+                        summary.to_excel(writer, sheet_name='Summary', index=False)
+                    
+                    output.seek(0)
+                    
+                    st.download_button(
+                        label="📥 Download Complete Excel File",
+                        data=output,
+                        file_name=f"lsi_coupon_analysis_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    )
+                    
+                    st.success("✅ Excel file ready for download!")
 
 if __name__ == "__main__":
     main()
