@@ -351,19 +351,49 @@ def main():
         "📋 Data Detail",
         "💾 Export"
     ])
-    
+
     # Tab 1: Line Chart
     with tab1:
-    st.subheader("Daily Coupon Usage Trend")
-    
-    if len(df_filtered) == 0:
-        st.warning("No data to display with current filters")
-    else:
-        try:
-            fig = create_line_chart(df_filtered)
-            st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': True})
-        except Exception as e:
-            st.error(f"Error creating chart: {str(e)}")
+        st.subheader("📈 Daily Coupon Usage Trend")
+        
+        if len(df_filtered) == 0:
+            st.warning("No data to display with current filters")
+        else:
+            try:
+                # Chart
+                fig = create_line_chart(df_filtered)
+                st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': True})
+                
+                # Separator
+                st.markdown("---")
+                
+                # Data Table
+                st.subheader("📊 Daily Data Table")
+                data_table = create_data_table(df_filtered)
+                
+                # Style the table
+                st.dataframe(
+                    data_table.style.format({
+                        col: '{:.0f}' for col in data_table.columns if col != 'CpnNm'
+                    }).set_properties(**{
+                        'background-color': '#f0f2f6',
+                        'border': '1px solid #ddd'
+                    }),
+                    use_container_width=True,
+                    height=400
+                )
+                
+                # Download table
+                csv = data_table.to_csv(index=False).encode('utf-8')
+                st.download_button(
+                    label="📥 Download Data Table (CSV)",
+                    data=csv,
+                    file_name=f"daily_data_table_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                    mime="text/csv"
+                )
+                
+            except Exception as e:
+                st.error(f"Error creating chart: {str(e)}")
     
     # Tab 2: Pivot Table
     with tab2:
