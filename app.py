@@ -199,14 +199,18 @@ def create_line_chart_matplotlib(df_filtered):
     
     dates_list = sorted(data_table.columns)
     
-    # Create figure with subplots
-    fig = plt.figure(figsize=(16, 11))
+    # Create figure with MORE vertical space
+    fig = plt.figure(figsize=(16, 12))
     
-    # Chart axes - larger space
-    ax_chart = plt.subplot2grid((4, 1), (0, 0), rowspan=3)
+    # Use GridSpec for better control
+    import matplotlib.gridspec as gridspec
+    gs = gridspec.GridSpec(2, 1, figure=fig, height_ratios=[2, 1], hspace=0.4)
+    
+    # Chart axes
+    ax_chart = fig.add_subplot(gs[0])
     
     # Table axes
-    ax_table = plt.subplot2grid((4, 1), (3, 0))
+    ax_table = fig.add_subplot(gs[1])
     
     # Colors
     colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', 
@@ -216,14 +220,14 @@ def create_line_chart_matplotlib(df_filtered):
     
     # Find max for Y range
     max_qty = daily_trend['Qty'].max()
-    y_max = max_qty * 1.25  # Extra space for labels
+    y_max = max_qty * 1.3  # Extra 30% space for labels
     
     # Plot lines
     for i, coupon in enumerate(all_coupons):
         coupon_data = daily_trend[daily_trend['CpnNm'] == coupon]
         
         # Plot line
-        line = ax_chart.plot(
+        ax_chart.plot(
             coupon_data['SaleDy'], 
             coupon_data['Qty'],
             marker='o',
@@ -231,26 +235,28 @@ def create_line_chart_matplotlib(df_filtered):
             markersize=8,
             color=colors[i % len(colors)],
             label=coupon,
-            zorder=3  # Lines on top
-        )[0]
+            zorder=3
+        )
         
-        # Add data labels with white background to avoid overlap
+        # Add data labels with white background
         for idx, row in coupon_data.iterrows():
-            # Determine position
+            # Smart positioning
             if row['Qty'] > (max_qty * 0.75):
                 va = 'bottom'
-                offset = 15
+                offset = 20
+            elif row['Qty'] < (max_qty * 0.15):
+                va = 'bottom'
+                offset = 20
             else:
                 va = 'top'
-                offset = -15
+                offset = -20
             
-            # Add label with white bbox
             ax_chart.annotate(
                 f"{int(row['Qty'])}", 
                 xy=(row['SaleDy'], row['Qty']),
                 xytext=(0, offset),
                 textcoords='offset points',
-                fontsize=10,
+                fontsize=9,
                 fontweight='bold',
                 color=colors[i % len(colors)],
                 ha='center',
@@ -258,24 +264,28 @@ def create_line_chart_matplotlib(df_filtered):
                 bbox=dict(
                     boxstyle='round,pad=0.3',
                     facecolor='white',
-                    edgecolor='none',
-                    alpha=0.8
+                    edgecolor='lightgray',
+                    alpha=0.9,
+                    linewidth=0.5
                 ),
-                zorder=4  # Labels on top of everything
+                zorder=4
             )
     
     # Chart formatting
     ax_chart.set_title('RESULT PROMO NEW MEMBER & DORMANT\nBY COUPON USAGE (ALL STORE)', 
-                       fontsize=16, fontweight='bold', pad=20)
+                       fontsize=16, fontweight='bold', pad=15)
     ax_chart.set_ylabel('Quantity', fontsize=13, fontweight='bold')
     ax_chart.set_ylim(0, y_max)
-    ax_chart.grid(True, alpha=0.3, zorder=1)
-    ax_chart.legend(loc='upper left', bbox_to_anchor=(1.01, 1), fontsize=9)
+    ax_chart.grid(True, alpha=0.3, zorder=1, linestyle='--')
+    ax_chart.legend(loc='upper left', bbox_to_anchor=(1.01, 1), fontsize=9, frameon=True, shadow=True)
     
-    # Format x-axis with dates VISIBLE
+    # Format x-axis
     ax_chart.xaxis.set_major_formatter(mdates.DateFormatter('%d-%b'))
     ax_chart.tick_params(axis='x', rotation=45, labelsize=10)
-    ax_chart.set_xlabel('Date', fontsize=12, fontweight='bold')
+    ax_chart.set_xlabel('Date', fontsize=12, fontweight='bold', labelpad=10)
+    
+    # Add horizontal line at y=0
+    ax_chart.axhline(y=0, color='black', linewidth=1, zorder=2)
     
     # Prepare table data
     table_data = []
@@ -289,44 +299,50 @@ def create_line_chart_matplotlib(df_filtered):
     # Column labels
     col_labels = ['Coupon Name'] + [date.strftime('%d-%b') for date in dates_list]
     
-    # Create table
+    # Create table with adjusted width
     table = ax_table.table(
         cellText=table_data,
         colLabels=col_labels,
         cellLoc='center',
-        loc='center',
-        colWidths=[0.25] + [0.75/len(dates_list)] * len(dates_list)
+        loc='upper center',
+        colWidths=[0.22] + [0.78/len(dates_list)] * len(dates_list)
     )
     
     # Style table
     table.auto_set_font_size(False)
     table.set_fontsize(9)
-    table.scale(1, 2.5)
+    table.scale(1, 2.2)
     
     # Header styling
     for i in range(len(col_labels)):
         cell = table[(0, i)]
-        cell.set_facecolor('#AFEEEE')
+        cell.set_facecolor('#40E0D0')
         cell.set_text_props(weight='bold', fontsize=10)
+        cell.set_edgecolor('white')
+        cell.set_linewidth(2)
     
     # Row styling (alternating colors)
     for i in range(len(table_data)):
         for j in range(len(col_labels)):
             cell = table[(i+1, j)]
             if i % 2 == 0:
-                cell.set_facecolor('#FFFFFF')
+                cell.set_facecolor('#F0F8FF')
             else:
-                cell.set_facecolor('#D3D3D3')
+                cell.set_facecolor('#E0E0E0')
+            cell.set_edgecolor('white')
+            cell.set_linewidth(1)
     
     # Remove table axes
     ax_table.axis('off')
+    ax_table.set_xlim(0, 1)
+    ax_table.set_ylim(0, 1)
     
-    # Adjust layout with more space
-    plt.subplots_adjust(left=0.08, right=0.85, top=0.95, bottom=0.05, hspace=0.3)
+    # Adjust overall layout
+    plt.subplots_adjust(left=0.05, right=0.88, top=0.95, bottom=0.05)
     
     # Save to BytesIO
     buf = BytesIO()
-    plt.savefig(buf, format='png', dpi=150, bbox_inches='tight')
+    plt.savefig(buf, format='png', dpi=150, bbox_inches='tight', pad_inches=0.2)
     buf.seek(0)
     plt.close()
     
