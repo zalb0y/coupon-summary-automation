@@ -209,6 +209,7 @@ def create_line_chart_plotly(df_filtered):
     
     return fig
 
+
 def create_data_table_df(df_filtered):
     """Create data table as pandas DataFrame"""
     daily_trend = df_filtered.groupby(['SaleDy', 'CpnNm'])['Qty'].sum().reset_index()
