@@ -93,48 +93,61 @@ def create_line_chart_plotly(df_filtered):
                 fillcolor="lightblue",
                 opacity=0.2,
                 layer="below",
-                line_width=0,
-                annotation_text="Weekend" if date == dates_list[0] or (date.weekday() == 5 and all(d.weekday() < 5 for d in dates_list if d < date)) else "",
-                annotation_position="top left"
+                line_width=0
             )
     
     colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', 
               '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
     
     max_qty = daily_trend['Qty'].max()
-    y_range_max = max_qty * 1.2
+    y_range_max = max_qty * 1.3  # Extra space for labels
     
     all_coupons = sorted(df_filtered['CpnNm'].unique())
     
     for i, coupon in enumerate(all_coupons):
         coupon_data = daily_trend[daily_trend['CpnNm'] == coupon]
         
-        text_positions = []
-        for idx, row in coupon_data.iterrows():
-            if row['Qty'] > (max_qty * 0.7):
-                text_positions.append('bottom center')
-            else:
-                text_positions.append('top center')
-        
+        # Add line WITHOUT text labels first
         fig.add_trace(go.Scatter(
             x=coupon_data['SaleDy'],
             y=coupon_data['Qty'],
             name=coupon,
-            mode='lines+markers+text',
+            mode='lines+markers',
             line=dict(width=2.5, color=colors[i % len(colors)]),
             marker=dict(size=8),
-            text=coupon_data['Qty'].astype(int),
-            textposition=text_positions,
-            textfont=dict(
-                size=11,
-                color=colors[i % len(colors)],
-                family='Arial Black, sans-serif'
-            ),
             hovertemplate='<b>%{fullData.name}</b><br>' +
                           'Date: %{x|%d-%b-%Y}<br>' +
                           'Quantity: %{y:,.0f}<br>' +
                           '<extra></extra>'
         ))
+        
+        # Add annotations with white background
+        for idx, row in coupon_data.iterrows():
+            # Smart positioning
+            if row['Qty'] > (max_qty * 0.75):
+                yshift = 20
+            elif row['Qty'] < (max_qty * 0.15):
+                yshift = 20
+            else:
+                yshift = -20
+            
+            fig.add_annotation(
+                x=row['SaleDy'],
+                y=row['Qty'],
+                text=f"<b>{int(row['Qty'])}</b>",
+                showarrow=False,
+                font=dict(
+                    size=10,
+                    color=colors[i % len(colors)],
+                    family='Arial, sans-serif'
+                ),
+                bgcolor='rgba(255, 255, 255, 0.9)',  # White background
+                bordercolor='lightgray',
+                borderwidth=0.5,
+                borderpad=3,
+                yshift=yshift,
+                xanchor='center'
+            )
     
     fig.update_layout(
         title=dict(
