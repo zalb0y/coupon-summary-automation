@@ -73,6 +73,114 @@ def filter_data(df, filter_stores, filter_mode, coupon_keywords, selected_coupon
         ]
     
     return df_filtered
+
+def create_line_chart_plotly(df_filtered):
+    """Create interactive Plotly line chart"""
+    # Aggregate data
+    daily_trend = df_filtered.groupby(['SaleDy', 'CpnNm'])['Qty'].sum().reset_index()
+    daily_trend = daily_trend.sort_values(['SaleDy', 'CpnNm'])
+    
+    fig = go.Figure()
+    
+    colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', 
+              '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
+    
+    max_qty = daily_trend['Qty'].max()
+    y_range_max = max_qty * 1.2
+    
+    all_coupons = sorted(df_filtered['CpnNm'].unique())
+    
+    for i, coupon in enumerate(all_coupons):
+        coupon_data = daily_trend[daily_trend['CpnNm'] == coupon]
+        
+        text_positions = []
+        for idx, row in coupon_data.iterrows():
+            if row['Qty'] > (max_qty * 0.7):
+                text_positions.append('bottom center')
+            else:
+                text_positions.append('top center')
+        
+        fig.add_trace(go.Scatter(
+            x=coupon_data['SaleDy'],
+            y=coupon_data['Qty'],
+            name=coupon,
+            mode='lines+markers+text',
+            line=dict(width=2.5, color=colors[i % len(colors)]),
+            marker=dict(size=8),
+            text=coupon_data['Qty'].astype(int),
+            textposition=text_positions,
+            textfont=dict(
+                size=11,
+                color=colors[i % len(colors)],
+                family='Arial Black, sans-serif'
+            ),
+            hovertemplate='<b>%{fullData.name}</b><br>' +
+                          'Date: %{x|%d-%b-%Y}<br>' +
+                          'Quantity: %{y:,.0f}<br>' +
+                          '<extra></extra>'
+        ))
+    
+    fig.update_layout(
+        title=dict(
+            text='<b>RESULT PROMO NEW MEMBER & DORMANT</b><br><sub>BY COUPON USAGE (ALL STORE)</sub>',
+            x=0.5,
+            xanchor='center',
+            font=dict(size=16)
+        ),
+        xaxis=dict(
+            title='<b>Date</b>',
+            tickformat='%d-%b',
+            tickangle=-45,
+            showgrid=True,
+            gridcolor='lightgray',
+            gridwidth=0.5
+        ),
+        yaxis=dict(
+            title='<b>Quantity</b>',
+            showgrid=True,
+            gridcolor='lightgray',
+            gridwidth=0.5,
+            tickformat=',',
+            range=[0, y_range_max]
+        ),
+        hovermode='x unified',
+        height=600,
+        showlegend=True,
+        legend=dict(
+            orientation='v',
+            yanchor='top',
+            y=1,
+            xanchor='left',
+            x=1.02,
+            font=dict(size=9),
+            bgcolor='rgba(255,255,255,0.9)',
+            bordercolor='gray',
+            borderwidth=1
+        ),
+        plot_bgcolor='white',
+        font=dict(family='Arial', size=11),
+        margin=dict(t=80, b=80, l=60, r=200)
+    )
+    
+    return fig
+
+def create_data_table_df(df_filtered):
+    """Create data table as pandas DataFrame"""
+    daily_trend = df_filtered.groupby(['SaleDy', 'CpnNm'])['Qty'].sum().reset_index()
+    
+    data_table = daily_trend.pivot_table(
+        values='Qty', 
+        index='CpnNm', 
+        columns='SaleDy', 
+        aggfunc='sum', 
+        fill_value=0
+    )
+    
+    data_table.columns = [col.strftime('%d-%b') for col in data_table.columns]
+    data_table = data_table.reset_index()
+    data_table.columns.name = None
+    
+    return data_table
     
 def create_line_chart_matplotlib(df_filtered):
     """Create line chart with table using Matplotlib (perfect alignment)"""
@@ -202,11 +310,6 @@ def create_line_chart_matplotlib(df_filtered):
     plt.close()
     
     return buf
-
-def create_line_chart(df_filtered):
-    """Wrapper to choose between Matplotlib or Plotly"""
-    # For now, use Matplotlib for perfect alignment
-    return create_line_chart_matplotlib(df_filtered)
 
 def create_pivot_table(df_filtered):
     """Create pivot table: StrCd | StrNm | Coupon columns"""
@@ -373,32 +476,73 @@ def main():
         "💾 Export"
     ])
 
-   # Tab 1: Line Chart
+    # Tab 1: Line Chart
     with tab1:
-        st.subheader("Daily Coupon Usage Trend")
+        st.subheader("📈 Daily Coupon Usage Trend")
         
         if len(df_filtered) == 0:
             st.warning("No data to display with current filters")
         else:
-            try:
-                # Create chart with matplotlib
-                img_buf = create_line_chart(df_filtered)
-                
-                # Display image
-                st.image(img_buf, use_column_width=True)
-                
-                # Download button
-                st.download_button(
-                    label="📥 Download Chart (PNG)",
-                    data=img_buf,
-                    file_name=f"coupon_chart_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png",
-                    mime="image/png"
-                )
-                
-            except Exception as e:
-                st.error(f"Error creating chart: {str(e)}")
-                import traceback
-                st.code(traceback.format_exc())
+            # Choose visualization mode
+            viz_mode = st.radio(
+                "Visualization Mode:",
+                options=["Interactive (Plotly)", "Static Perfect Alignment (Matplotlib)"],
+                horizontal=True
+            )
+            
+            if viz_mode == "Interactive (Plotly)":
+                try:
+                    # PLOTLY VERSION - Interactive
+                    fig = create_line_chart_plotly(df_filtered)
+                    st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': True})
+                    
+                    st.markdown("---")
+                    
+                    # Data Table below
+                    st.subheader("📊 Daily Data Table")
+                    data_table = create_data_table_df(df_filtered)
+                    
+                    st.dataframe(
+                        data_table.style.format({
+                            col: '{:.0f}' for col in data_table.columns if col != 'CpnNm'
+                        }),
+                        use_container_width=True,
+                        height=400
+                    )
+                    
+                    # Download table
+                    csv = data_table.to_csv(index=False).encode('utf-8')
+                    st.download_button(
+                        label="📥 Download Data Table (CSV)",
+                        data=csv,
+                        file_name=f"daily_data_table_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                        mime="text/csv"
+                    )
+                    
+                except Exception as e:
+                    st.error(f"Error creating chart: {str(e)}")
+            
+            else:  # Matplotlib
+                try:
+                    st.info("💡 This version has perfect chart-table alignment, ideal for reports and presentations.")
+                    
+                    # MATPLOTLIB VERSION - Perfect alignment
+                    img_buf = create_line_chart_matplotlib(df_filtered)
+                    
+                    st.image(img_buf, use_column_width=True)
+                    
+                    # Download button
+                    st.download_button(
+                        label="📥 Download Chart + Table (PNG)",
+                        data=img_buf,
+                        file_name=f"coupon_chart_aligned_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png",
+                        mime="image/png"
+                    )
+                    
+                except Exception as e:
+                    st.error(f"Error creating chart: {str(e)}")
+                    import traceback
+                    st.code(traceback.format_exc())
     
     # Tab 2: Pivot Table
     with tab2:
