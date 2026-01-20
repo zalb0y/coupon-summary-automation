@@ -3,6 +3,10 @@ import pandas as pd
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
 import io
+import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
+from io import BytesIO
+import base64
 
 # Page config
 st.set_page_config(
@@ -70,8 +74,8 @@ def filter_data(df, filter_stores, filter_mode, coupon_keywords, selected_coupon
     
     return df_filtered
     
-def create_line_chart(df_filtered):
-    """Create line chart with data table in single figure"""
+def create_line_chart_matplotlib(df_filtered):
+    """Create line chart with table using Matplotlib (perfect alignment)"""
     # Aggregate data
     daily_trend = df_filtered.groupby(['SaleDy', 'CpnNm'])['Qty'].sum().reset_index()
     daily_trend = daily_trend.sort_values(['SaleDy', 'CpnNm'])
@@ -86,136 +90,123 @@ def create_line_chart(df_filtered):
     )
     
     dates_list = sorted(data_table.columns)
-    num_dates = len(dates_list)
     
-    # Table headers and values
-    table_headers = ['<b>Coupon Name</b>'] + [f'<b>{date.strftime("%d-%b")}</b>' for date in dates_list]
-    table_values = [data_table.index.tolist()]
-    for date in dates_list:
-        table_values.append(data_table[date].tolist())
+    # Create figure with subplots
+    fig = plt.figure(figsize=(14, 10))
     
-    # Create figure
-    fig = go.Figure()
+    # Chart axes
+    ax_chart = plt.subplot2grid((3, 1), (0, 0), rowspan=2)
+    
+    # Table axes
+    ax_table = plt.subplot2grid((3, 1), (2, 0))
     
     # Colors
     colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', 
               '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
     
-    max_qty = daily_trend['Qty'].max()
-    y_range_max = max_qty * 1.25  # Extra space for labels
-    
     all_coupons = sorted(df_filtered['CpnNm'].unique())
     
-    # Add lines for chart
+    # Plot lines
     for i, coupon in enumerate(all_coupons):
         coupon_data = daily_trend[daily_trend['CpnNm'] == coupon]
         
-        text_positions = []
-        for idx, row in coupon_data.iterrows():
-            if row['Qty'] > (max_qty * 0.7):
-                text_positions.append('bottom center')
-            else:
-                text_positions.append('top center')
+        ax_chart.plot(
+            coupon_data['SaleDy'], 
+            coupon_data['Qty'],
+            marker='o',
+            linewidth=2.5,
+            markersize=8,
+            color=colors[i % len(colors)],
+            label=coupon
+        )
         
-        fig.add_trace(go.Scatter(
-            x=coupon_data['SaleDy'],
-            y=coupon_data['Qty'],
-            name=coupon,
-            mode='lines+markers+text',
-            line=dict(width=2.5, color=colors[i % len(colors)]),
-            marker=dict(size=8),
-            text=coupon_data['Qty'].astype(int),
-            textposition=text_positions,
-            textfont=dict(
-                size=11,
+        # Add data labels
+        for idx, row in coupon_data.iterrows():
+            ax_chart.text(
+                row['SaleDy'], 
+                row['Qty'], 
+                f"{int(row['Qty'])}", 
+                fontsize=10,
+                fontweight='bold',
                 color=colors[i % len(colors)],
-                family='Arial Black, sans-serif'
-            ),
-            xaxis='x',
-            yaxis='y',
-            hovertemplate='<b>%{fullData.name}</b><br>' +
-                          'Date: %{x|%d-%b-%Y}<br>' +
-                          'Quantity: %{y:,.0f}<br>' +
-                          '<extra></extra>'
-        ))
+                ha='center',
+                va='bottom' if row['Qty'] > daily_trend['Qty'].max() * 0.7 else 'top'
+            )
     
-    # Alternating row colors
-    num_coupons = len(all_coupons)
-    fill_colors = []
-    for i in range(num_coupons):
-        row_color = 'white' if i % 2 == 0 else 'lightgray'
-        fill_colors.append([row_color] * (num_dates + 1))
+    # Chart formatting
+    ax_chart.set_title('RESULT PROMO NEW MEMBER & DORMANT\nBY COUPON USAGE (ALL STORE)', 
+                       fontsize=14, fontweight='bold', pad=20)
+    ax_chart.set_ylabel('Quantity', fontsize=12, fontweight='bold')
+    ax_chart.grid(True, alpha=0.3)
+    ax_chart.legend(loc='upper left', bbox_to_anchor=(1.01, 1), fontsize=9)
     
-    # Add table below chart
-    fig.add_trace(go.Table(
-        header=dict(
-            values=table_headers,
-            fill_color='paleturquoise',
-            align='center',
-            font=dict(size=10, color='black', family='Arial'),
-            height=30
-        ),
-        cells=dict(
-            values=table_values,
-            fill_color=fill_colors,
-            align=['left'] + ['center'] * num_dates,
-            font=dict(size=10, family='Arial'),
-            height=28
-        ),
-        domain=dict(x=[0, 1], y=[0, 0.28])  # Table: 0-28%
-    ))
+    # Format x-axis
+    ax_chart.xaxis.set_major_formatter(mdates.DateFormatter('%d-%b'))
+    ax_chart.tick_params(axis='x', rotation=45)
     
-    # Update layout
-    fig.update_layout(
-        title=dict(
-            text='<b>RESULT PROMO NEW MEMBER & DORMANT</b><br><sub>BY COUPON USAGE (ALL STORE)</sub>',
-            x=0.5,
-            xanchor='center',
-            font=dict(size=16),
-            y=0.98
-        ),
-        xaxis=dict(
-            title='<b>Date</b>',
-            tickformat='%d-%b',
-            tickmode='array',
-            tickvals=dates_list,
-            ticktext=[date.strftime('%d-%b') for date in dates_list],
-            tickangle=-45,
-            showgrid=True,
-            gridcolor='lightgray',
-            gridwidth=0.5,
-            domain=[0, 1],
-            anchor='y'
-        ),
-        yaxis=dict(
-            title='<b>Quantity</b>',
-            showgrid=True,
-            gridcolor='lightgray',
-            gridwidth=0.5,
-            tickformat=',',
-            range=[0, y_range_max],
-            domain=[0.33, 0.93]  # Chart: 33%-93% (lebih tinggi, lebih jauh dari table)
-        ),
-        hovermode='x unified',
-        height=1000,  # Lebih tinggi total
-        showlegend=True,
-        legend=dict(
-            orientation='v',
-            yanchor='top',
-            y=0.92,
-            xanchor='left',
-            x=1.01,
-            font=dict(size=9),
-            bgcolor='rgba(255,255,255,0.9)',
-            bordercolor='gray',
-            borderwidth=1
-        ),
-        plot_bgcolor='white',
-        font=dict(family='Arial', size=11),
-        margin=dict(t=80, b=50, l=60, r=200)
+    # Remove x-axis labels from chart (will show in table)
+    ax_chart.set_xticklabels([])
+    ax_chart.set_xlabel('')
+    
+    # Prepare table data
+    table_data = []
+    for coupon in all_coupons:
+        row = [coupon]
+        for date in dates_list:
+            val = data_table.loc[coupon, date] if coupon in data_table.index else 0
+            row.append(int(val))
+        table_data.append(row)
+    
+    # Column labels
+    col_labels = ['Coupon Name'] + [date.strftime('%d-%b') for date in dates_list]
+    
+    # Create table
+    table = ax_table.table(
+        cellText=table_data,
+        colLabels=col_labels,
+        cellLoc='center',
+        loc='center',
+        colWidths=[0.3] + [0.7/len(dates_list)] * len(dates_list)
     )
     
-    return fig
+    # Style table
+    table.auto_set_font_size(False)
+    table.set_fontsize(9)
+    table.scale(1, 2)
+    
+    # Header styling
+    for i in range(len(col_labels)):
+        cell = table[(0, i)]
+        cell.set_facecolor('#AFEEEE')
+        cell.set_text_props(weight='bold')
+    
+    # Row styling (alternating colors)
+    for i in range(len(table_data)):
+        for j in range(len(col_labels)):
+            cell = table[(i+1, j)]
+            if i % 2 == 0:
+                cell.set_facecolor('#FFFFFF')
+            else:
+                cell.set_facecolor('#D3D3D3')
+    
+    # Remove table axes
+    ax_table.axis('off')
+    
+    # Adjust layout
+    plt.tight_layout()
+    
+    # Save to BytesIO
+    buf = BytesIO()
+    plt.savefig(buf, format='png', dpi=150, bbox_inches='tight')
+    buf.seek(0)
+    plt.close()
+    
+    return buf
+
+def create_line_chart(df_filtered):
+    """Wrapper to choose between Matplotlib or Plotly"""
+    # For now, use Matplotlib for perfect alignment
+    return create_line_chart_matplotlib(df_filtered)
 
 def create_pivot_table(df_filtered):
     """Create pivot table: StrCd | StrNm | Coupon columns"""
@@ -382,7 +373,7 @@ def main():
         "💾 Export"
     ])
 
-    # Tab 1: Line Chart
+   # Tab 1: Line Chart
     with tab1:
         st.subheader("Daily Coupon Usage Trend")
         
@@ -390,10 +381,24 @@ def main():
             st.warning("No data to display with current filters")
         else:
             try:
-                fig = create_line_chart(df_filtered)
-                st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': True})
+                # Create chart with matplotlib
+                img_buf = create_line_chart(df_filtered)
+                
+                # Display image
+                st.image(img_buf, use_column_width=True)
+                
+                # Download button
+                st.download_button(
+                    label="📥 Download Chart (PNG)",
+                    data=img_buf,
+                    file_name=f"coupon_chart_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png",
+                    mime="image/png"
+                )
+                
             except Exception as e:
                 st.error(f"Error creating chart: {str(e)}")
+                import traceback
+                st.code(traceback.format_exc())
     
     # Tab 2: Pivot Table
     with tab2:
