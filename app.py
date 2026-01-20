@@ -71,10 +71,28 @@ def filter_data(df, filter_stores, filter_mode, coupon_keywords, selected_coupon
     return df_filtered
 
 def create_line_chart(df_filtered):
-    """Create line chart only (table will be separate)"""
+    """Create line chart with data table in single figure"""
     # Aggregate data
     daily_trend = df_filtered.groupby(['SaleDy', 'CpnNm'])['Qty'].sum().reset_index()
     daily_trend = daily_trend.sort_values(['SaleDy', 'CpnNm'])
+    
+    # Prepare table data
+    data_table = daily_trend.pivot_table(
+        values='Qty', 
+        index='CpnNm', 
+        columns='SaleDy', 
+        aggfunc='sum', 
+        fill_value=0
+    )
+    
+    dates_list = sorted(data_table.columns)
+    num_dates = len(dates_list)
+    
+    # Table headers and values
+    table_headers = ['<b>Coupon Name</b>'] + [f'<b>{date.strftime("%d-%b")}</b>' for date in dates_list]
+    table_values = [data_table.index.tolist()]
+    for date in dates_list:
+        table_values.append(data_table[date].tolist())
     
     # Create figure
     fig = go.Figure()
@@ -88,7 +106,7 @@ def create_line_chart(df_filtered):
     
     all_coupons = sorted(df_filtered['CpnNm'].unique())
     
-    # Add lines
+    # Add lines for chart
     for i, coupon in enumerate(all_coupons):
         coupon_data = daily_trend[daily_trend['CpnNm'] == coupon]
         
@@ -113,27 +131,61 @@ def create_line_chart(df_filtered):
                 color=colors[i % len(colors)],
                 family='Arial Black, sans-serif'
             ),
+            xaxis='x',
+            yaxis='y',
             hovertemplate='<b>%{fullData.name}</b><br>' +
                           'Date: %{x|%d-%b-%Y}<br>' +
                           'Quantity: %{y:,.0f}<br>' +
                           '<extra></extra>'
         ))
     
-    # Layout
+    # Alternating row colors
+    num_coupons = len(all_coupons)
+    fill_colors = []
+    for i in range(num_coupons):
+        row_color = 'white' if i % 2 == 0 else 'lightgray'
+        fill_colors.append([row_color] * (num_dates + 1))
+    
+    # Add table below chart
+    fig.add_trace(go.Table(
+        header=dict(
+            values=table_headers,
+            fill_color='paleturquoise',
+            align='center',
+            font=dict(size=10, color='black', family='Arial'),
+            height=30
+        ),
+        cells=dict(
+            values=table_values,
+            fill_color=fill_colors,
+            align=['left'] + ['center'] * num_dates,
+            font=dict(size=10, family='Arial'),
+            height=28
+        ),
+        domain=dict(x=[0, 1], y=[0, 0.30])  # Table at bottom 30%
+    ))
+    
+    # Update layout
     fig.update_layout(
         title=dict(
             text='<b>RESULT PROMO NEW MEMBER & DORMANT</b><br><sub>BY COUPON USAGE (ALL STORE)</sub>',
             x=0.5,
             xanchor='center',
-            font=dict(size=16)
+            font=dict(size=16),
+            y=0.98
         ),
         xaxis=dict(
             title='<b>Date</b>',
             tickformat='%d-%b',
+            tickmode='array',
+            tickvals=dates_list,
+            ticktext=[date.strftime('%d-%b') for date in dates_list],
             tickangle=-45,
             showgrid=True,
             gridcolor='lightgray',
-            gridwidth=0.5
+            gridwidth=0.5,
+            domain=[0, 1],
+            anchor='y'
         ),
         yaxis=dict(
             title='<b>Quantity</b>',
@@ -141,17 +193,18 @@ def create_line_chart(df_filtered):
             gridcolor='lightgray',
             gridwidth=0.5,
             tickformat=',',
-            range=[0, y_range_max]
+            range=[0, y_range_max],
+            domain=[0.35, 0.92]  # Chart in middle/top area
         ),
         hovermode='x unified',
-        height=600,
+        height=900,
         showlegend=True,
         legend=dict(
             orientation='v',
             yanchor='top',
-            y=1,
+            y=0.90,
             xanchor='left',
-            x=1.02,
+            x=1.01,
             font=dict(size=9),
             bgcolor='rgba(255,255,255,0.9)',
             bordercolor='gray',
@@ -159,33 +212,10 @@ def create_line_chart(df_filtered):
         ),
         plot_bgcolor='white',
         font=dict(family='Arial', size=11),
-        margin=dict(t=80, b=80, l=60, r=200)
+        margin=dict(t=80, b=50, l=60, r=200)
     )
     
     return fig
-
-def create_data_table(df_filtered):
-    """Create data table as pandas DataFrame"""
-    # Aggregate data
-    daily_trend = df_filtered.groupby(['SaleDy', 'CpnNm'])['Qty'].sum().reset_index()
-    
-    # Pivot
-    data_table = daily_trend.pivot_table(
-        values='Qty', 
-        index='CpnNm', 
-        columns='SaleDy', 
-        aggfunc='sum', 
-        fill_value=0
-    )
-    
-    # Format column names
-    data_table.columns = [col.strftime('%d-%b') for col in data_table.columns]
-    
-    # Reset index to make CpnNm a column
-    data_table = data_table.reset_index()
-    data_table.columns.name = None
-    
-    return data_table
 
 def create_pivot_table(df_filtered):
     """Create pivot table: StrCd | StrNm | Coupon columns"""
@@ -354,44 +384,14 @@ def main():
 
     # Tab 1: Line Chart
     with tab1:
-        st.subheader("📈 Daily Coupon Usage Trend")
+        st.subheader("Daily Coupon Usage Trend")
         
         if len(df_filtered) == 0:
             st.warning("No data to display with current filters")
         else:
             try:
-                # Chart
                 fig = create_line_chart(df_filtered)
                 st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': True})
-                
-                # Separator
-                st.markdown("---")
-                
-                # Data Table
-                st.subheader("📊 Daily Data Table")
-                data_table = create_data_table(df_filtered)
-                
-                # Style the table
-                st.dataframe(
-                    data_table.style.format({
-                        col: '{:.0f}' for col in data_table.columns if col != 'CpnNm'
-                    }).set_properties(**{
-                        'background-color': '#f0f2f6',
-                        'border': '1px solid #ddd'
-                    }),
-                    use_container_width=True,
-                    height=400
-                )
-                
-                # Download table
-                csv = data_table.to_csv(index=False).encode('utf-8')
-                st.download_button(
-                    label="📥 Download Data Table (CSV)",
-                    data=csv,
-                    file_name=f"daily_data_table_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
-                    mime="text/csv"
-                )
-                
             except Exception as e:
                 st.error(f"Error creating chart: {str(e)}")
     
