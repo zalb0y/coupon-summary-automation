@@ -71,39 +71,13 @@ def filter_data(df, filter_stores, filter_mode, coupon_keywords, selected_coupon
     return df_filtered
 
 def create_line_chart(df_filtered):
-    """Create line chart with data table"""
+    """Create line chart only (table will be separate)"""
     # Aggregate data
     daily_trend = df_filtered.groupby(['SaleDy', 'CpnNm'])['Qty'].sum().reset_index()
     daily_trend = daily_trend.sort_values(['SaleDy', 'CpnNm'])
     
-    # Prepare table data
-    data_table = daily_trend.pivot_table(
-        values='Qty', 
-        index='CpnNm', 
-        columns='SaleDy', 
-        aggfunc='sum', 
-        fill_value=0
-    )
-    
-    dates_list = sorted(data_table.columns)
-    num_dates = len(dates_list)
-    
-    # Table headers and values
-    table_headers = ['<b>Coupon Name</b>'] + [f'<b>{date.strftime("%d-%b")}</b>' for date in dates_list]
-    table_values = [data_table.index.tolist()]
-    for date in dates_list:
-        table_values.append(data_table[date].tolist())
-    
-    # Create subplots with LEFT legend positioning
-    from plotly.subplots import make_subplots
-    
-    fig = make_subplots(
-        rows=2, cols=1,
-        row_heights=[0.60, 0.40],
-        subplot_titles=('', ''),
-        specs=[[{'type': 'scatter'}], [{'type': 'table'}]],
-        vertical_spacing=0.02  # Minimal spacing
-    )
+    # Create figure
+    fig = go.Figure()
     
     # Colors
     colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', 
@@ -143,86 +117,41 @@ def create_line_chart(df_filtered):
                           'Date: %{x|%d-%b-%Y}<br>' +
                           'Quantity: %{y:,.0f}<br>' +
                           '<extra></extra>'
-        ), row=1, col=1)
+        ))
     
-    # Alternating row colors
-    num_coupons = len(all_coupons)
-    fill_colors = []
-    for i in range(num_coupons):
-        row_color = 'white' if i % 2 == 0 else 'lightgray'
-        fill_colors.append([row_color] * (num_dates + 1))
-    
-    # Column widths - SAMA dengan chart width
-    # Legend di kiri akan mengambil space, jadi table column lebih lebar
-    coupon_name_width = 250  # Lebih lebar untuk match legend width
-    date_col_width = 80
-    table_col_widths = [coupon_name_width] + [date_col_width] * num_dates
-    
-    # Add table
-    fig.add_trace(go.Table(
-        header=dict(
-            values=table_headers,
-            fill_color='paleturquoise',
-            align='center',
-            font=dict(size=10, color='black', family='Arial'),
-            height=30
-        ),
-        cells=dict(
-            values=table_values,
-            fill_color=fill_colors,
-            align=['left'] + ['center'] * num_dates,
-            font=dict(size=10, family='Arial'),
-            height=28
-        ),
-        columnwidth=table_col_widths,
-        domain=dict(x=[0.18, 1], y=[0, 0.38])  # Start from 0.18 (same as chart)
-    ), row=2, col=1)
-    
-    # Update x-axis
-    fig.update_xaxes(
-        title='',  # No title to avoid overlap
-        tickformat='%d-%b',
-        tickmode='array',
-        tickvals=dates_list,
-        ticktext=[date.strftime('%d-%b') for date in dates_list],
-        tickangle=-45,
-        showgrid=True,
-        gridcolor='lightgray',
-        gridwidth=0.5,
-        domain=[0.18, 1],  # Chart starts from 0.18 (after legend)
-        anchor='y1',
-        row=1, col=1
-    )
-    
-    # Update y-axis
-    fig.update_yaxes(
-        title='<b>Quantity</b>',
-        showgrid=True,
-        gridcolor='lightgray',
-        gridwidth=0.5,
-        tickformat=',',
-        range=[0, y_range_max],
-        row=1, col=1
-    )
-    
-    # Layout with LEGEND on LEFT
+    # Layout
     fig.update_layout(
         title=dict(
             text='<b>RESULT PROMO NEW MEMBER & DORMANT</b><br><sub>BY COUPON USAGE (ALL STORE)</sub>',
             x=0.5,
             xanchor='center',
-            font=dict(size=16),
-            y=0.98
+            font=dict(size=16)
+        ),
+        xaxis=dict(
+            title='<b>Date</b>',
+            tickformat='%d-%b',
+            tickangle=-45,
+            showgrid=True,
+            gridcolor='lightgray',
+            gridwidth=0.5
+        ),
+        yaxis=dict(
+            title='<b>Quantity</b>',
+            showgrid=True,
+            gridcolor='lightgray',
+            gridwidth=0.5,
+            tickformat=',',
+            range=[0, y_range_max]
         ),
         hovermode='x unified',
-        height=900,
+        height=600,
         showlegend=True,
         legend=dict(
-            orientation='v',      # Vertical
+            orientation='v',
             yanchor='top',
-            y=0.95,              # Top of chart
+            y=1,
             xanchor='left',
-            x=0.01,              # LEFT side
+            x=1.02,
             font=dict(size=9),
             bgcolor='rgba(255,255,255,0.9)',
             bordercolor='gray',
@@ -230,22 +159,33 @@ def create_line_chart(df_filtered):
         ),
         plot_bgcolor='white',
         font=dict(family='Arial', size=11),
-        margin=dict(t=80, b=80, l=60, r=40),  # Bottom margin untuk Date label
-        xaxis_title_standoff=25  # Space untuk Date label
-    )
-    
-    # Add Date label manually below chart
-    fig.add_annotation(
-        text='<b>Date</b>',
-        xref='paper',
-        yref='paper',
-        x=0.59,  # Center between 0.18 and 1.0
-        y=0.36,  # Below chart, above table
-        showarrow=False,
-        font=dict(size=12, family='Arial')
+        margin=dict(t=80, b=80, l=60, r=200)
     )
     
     return fig
+
+def create_data_table(df_filtered):
+    """Create data table as pandas DataFrame"""
+    # Aggregate data
+    daily_trend = df_filtered.groupby(['SaleDy', 'CpnNm'])['Qty'].sum().reset_index()
+    
+    # Pivot
+    data_table = daily_trend.pivot_table(
+        values='Qty', 
+        index='CpnNm', 
+        columns='SaleDy', 
+        aggfunc='sum', 
+        fill_value=0
+    )
+    
+    # Format column names
+    data_table.columns = [col.strftime('%d-%b') for col in data_table.columns]
+    
+    # Reset index to make CpnNm a column
+    data_table = data_table.reset_index()
+    data_table.columns.name = None
+    
+    return data_table
 
 def create_pivot_table(df_filtered):
     """Create pivot table: StrCd | StrNm | Coupon columns"""
