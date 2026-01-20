@@ -354,16 +354,16 @@ def main():
     
     # Tab 1: Line Chart
     with tab1:
-        st.subheader("Daily Coupon Usage Trend")
-        
-        if len(df_filtered) == 0:
-            st.warning("No data to display with current filters")
-        else:
-            try:
-                fig = create_line_chart(df_filtered)
-                st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': True})
-            except Exception as e:
-                st.error(f"Error creating chart: {str(e)}")
+    st.subheader("Daily Coupon Usage Trend")
+    
+    if len(df_filtered) == 0:
+        st.warning("No data to display with current filters")
+    else:
+        try:
+            fig = create_line_chart(df_filtered)
+            st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': True})
+        except Exception as e:
+            st.error(f"Error creating chart: {str(e)}")
     
     # Tab 2: Pivot Table
     with tab2:
