@@ -69,7 +69,7 @@ def filter_data(df, filter_stores, filter_mode, coupon_keywords, selected_coupon
         ]
     
     return df_filtered
-
+    
 def create_line_chart(df_filtered):
     """Create line chart with data table in single figure"""
     # Aggregate data
@@ -102,7 +102,7 @@ def create_line_chart(df_filtered):
               '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
     
     max_qty = daily_trend['Qty'].max()
-    y_range_max = max_qty * 1.2
+    y_range_max = max_qty * 1.25  # Extra space for labels
     
     all_coupons = sorted(df_filtered['CpnNm'].unique())
     
@@ -162,7 +162,7 @@ def create_line_chart(df_filtered):
             font=dict(size=10, family='Arial'),
             height=28
         ),
-        domain=dict(x=[0, 1], y=[0, 0.30])  # Table at bottom 30%
+        domain=dict(x=[0, 1], y=[0, 0.28])  # Table: 0-28%
     ))
     
     # Update layout
@@ -194,15 +194,15 @@ def create_line_chart(df_filtered):
             gridwidth=0.5,
             tickformat=',',
             range=[0, y_range_max],
-            domain=[0.35, 0.92]  # Chart in middle/top area
+            domain=[0.33, 0.93]  # Chart: 33%-93% (lebih tinggi, lebih jauh dari table)
         ),
         hovermode='x unified',
-        height=900,
+        height=1000,  # Lebih tinggi total
         showlegend=True,
         legend=dict(
             orientation='v',
             yanchor='top',
-            y=0.90,
+            y=0.92,
             xanchor='left',
             x=1.01,
             font=dict(size=9),
