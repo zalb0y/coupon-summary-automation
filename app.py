@@ -278,8 +278,7 @@ def create_line_chart_matplotlib(df_filtered):
                 edgecolor='#FFA500',  # Orange border
                 linewidth=2,
                 linestyle='--',
-                zorder=0,
-                label='🌴 Weekend' if not weekend_added else ''
+                zorder=0
             )
             weekend_added = True
     
