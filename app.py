@@ -82,19 +82,26 @@ def create_line_chart_plotly(df_filtered):
     daily_trend = daily_trend.sort_values(['SaleDy', 'CpnNm'])
     
     fig = go.Figure()
-    
-    # Add weekend shading first (background)
+
+    # Add weekend shading first (background) - MORE VISIBLE
     dates_list = sorted(daily_trend['SaleDy'].unique())
+    weekend_added_label = False
     for date in dates_list:
         if date.weekday() >= 5:  # Saturday or Sunday
             fig.add_vrect(
                 x0=date - pd.Timedelta(hours=12),
                 x1=date + pd.Timedelta(hours=12),
-                fillcolor="lightblue",
-                opacity=0.2,
+                fillcolor="#FFE4B5",  # Moccasin - lebih warm dan terlihat
+                opacity=0.4,  # Lebih gelap dari 0.2
                 layer="below",
-                line_width=0
+                line_width=2,
+                line_color="#FFA500",  # Orange border
+                annotation_text="🌴 Weekend" if not weekend_added_label else "",
+                annotation_position="top left",
+                annotation_font_size=9,
+                annotation_font_color="#FF8C00"
             )
+            weekend_added_label = True
     
     colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', 
               '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
@@ -250,17 +257,20 @@ def create_line_chart_matplotlib(df_filtered):
     max_qty = daily_trend['Qty'].max()
     y_max = max_qty * 1.3
     
-    # Add weekend shading FIRST (background)
+    # Add weekend shading FIRST (background) - MORE VISIBLE
     weekend_added = False
     for date in dates_list:
         if date.weekday() >= 5:  # Saturday or Sunday
             ax_chart.axvspan(
                 date - pd.Timedelta(hours=12), 
                 date + pd.Timedelta(hours=12),
-                alpha=0.15,
-                color='#87CEEB',
+                alpha=0.35,  # Lebih gelap dari 0.15
+                color='#FFE4B5',  # Moccasin - warm color
+                edgecolor='#FFA500',  # Orange border
+                linewidth=2,
+                linestyle='--',
                 zorder=0,
-                label='Weekend' if not weekend_added else ''
+                label='🌴 Weekend' if not weekend_added else ''
             )
             weekend_added = True
     
