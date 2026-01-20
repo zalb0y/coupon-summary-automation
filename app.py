@@ -140,7 +140,7 @@ def create_line_chart_plotly(df_filtered):
             else:
                 text_positions.append('top center')
         
-        # Add trace with text labels
+        # Add trace with text labels (will hide when legend is toggled)
         fig.add_trace(go.Scatter(
             x=coupon_data['SaleDy'],
             y=coupon_data['Qty'],
@@ -199,7 +199,7 @@ def create_line_chart_plotly(df_filtered):
             bordercolor='gray',
             borderwidth=1
         ),
-        # ADD WEEKEND SHAPES HERE
+        # Add weekend shapes here (NOT in legend)
         shapes=shapes,
         annotations=annotations_list,
         plot_bgcolor='white',
@@ -208,7 +208,6 @@ def create_line_chart_plotly(df_filtered):
     )
     
     return fig
-
 
 def create_data_table_df(df_filtered):
     """Create data table as pandas DataFrame"""
@@ -274,8 +273,8 @@ def create_line_chart_matplotlib(df_filtered):
             ax_chart.axvspan(
                 date - pd.Timedelta(hours=12), 
                 date + pd.Timedelta(hours=12),
-                alpha=0.35,  # Lebih gelap dari 0.15
-                color='#FFE4B5',  # Moccasin - warm color
+                alpha=0.35,
+                color='#FFE4B5',  # Moccasin
                 edgecolor='#FFA500',  # Orange border
                 linewidth=2,
                 linestyle='--',
@@ -627,7 +626,7 @@ def main():
             
             else:  # Matplotlib
                 try:
-                    st.info("💡 This version has perfect chart-table alignment, ideal for reports and presentations. Weekend days are highlighted in light blue.")
+                    st.info("💡 This version has perfect chart-table alignment. Weekend days are highlighted with orange borders.")
                     
                     # MATPLOTLIB VERSION - Perfect alignment
                     img_buf = create_line_chart_matplotlib(df_filtered)
