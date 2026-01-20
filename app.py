@@ -83,25 +83,41 @@ def create_line_chart_plotly(df_filtered):
     
     fig = go.Figure()
     
-    # Add weekend shading first (background) - MORE VISIBLE
+    # Prepare weekend shading using shapes (won't appear in legend)
     dates_list = sorted(daily_trend['SaleDy'].unique())
-    weekend_added_label = False
+    shapes = []
+    annotations_list = []
+    weekend_labeled = False
+    
     for date in dates_list:
         if date.weekday() >= 5:  # Saturday or Sunday
-            fig.add_vrect(
+            shapes.append(dict(
+                type="rect",
+                xref="x",
+                yref="paper",
                 x0=date - pd.Timedelta(hours=12),
                 x1=date + pd.Timedelta(hours=12),
-                fillcolor="#FFE4B5",  # Moccasin
+                y0=0,
+                y1=1,
+                fillcolor="#FFE4B5",
                 opacity=0.4,
                 layer="below",
-                line_width=2,
-                line_color="#FFA500",  # Orange border
-                annotation_text="🌴 Weekend" if not weekend_added_label else "",
-                annotation_position="top left",
-                annotation_font_size=9,
-                annotation_font_color="#FF8C00"
-            )
-            weekend_added_label = True
+                line=dict(color="#FFA500", width=2)
+            ))
+            
+            # Add weekend label only once
+            if not weekend_labeled:
+                annotations_list.append(dict(
+                    xref="x",
+                    yref="paper",
+                    x=date,
+                    y=1.02,
+                    text="🌴 Weekend",
+                    showarrow=False,
+                    font=dict(size=9, color="#FF8C00"),
+                    xanchor="center"
+                ))
+                weekend_labeled = True
     
     colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', 
               '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
@@ -124,12 +140,12 @@ def create_line_chart_plotly(df_filtered):
             else:
                 text_positions.append('top center')
         
-        # Add trace with text labels (these will hide with legend!)
+        # Add trace with text labels
         fig.add_trace(go.Scatter(
             x=coupon_data['SaleDy'],
             y=coupon_data['Qty'],
             name=coupon,
-            mode='lines+markers+text',  # Include 'text' mode
+            mode='lines+markers+text',
             line=dict(width=2.5, color=colors[i % len(colors)]),
             marker=dict(size=8),
             text=[f'<b>{int(val)}</b>' for val in coupon_data['Qty']],
@@ -139,8 +155,6 @@ def create_line_chart_plotly(df_filtered):
                 color=colors[i % len(colors)],
                 family='Arial, sans-serif'
             ),
-            # Style text dengan background putih menggunakan CSS
-            texttemplate='<b>%{text}</b>',
             cliponaxis=False,
             hovertemplate='<b>%{fullData.name}</b><br>' +
                           'Date: %{x|%d-%b-%Y}<br>' +
@@ -185,6 +199,9 @@ def create_line_chart_plotly(df_filtered):
             bordercolor='gray',
             borderwidth=1
         ),
+        # ADD WEEKEND SHAPES HERE
+        shapes=shapes,
+        annotations=annotations_list,
         plot_bgcolor='white',
         font=dict(family='Arial', size=11),
         margin=dict(t=80, b=80, l=60, r=200)
