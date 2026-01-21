@@ -625,7 +625,7 @@ def main():
             
             else:  # Matplotlib
                 try:
-                    st.info("💡 This version has perfect chart-table alignment. Weekend days are highlighted with orange borders.")
+                    st.info("💡Weekend days are highlighted with orange borders.")
                     
                     # MATPLOTLIB VERSION - Perfect alignment
                     img_buf = create_line_chart_matplotlib(df_filtered)
