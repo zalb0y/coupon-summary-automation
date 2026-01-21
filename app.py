@@ -583,7 +583,7 @@ def main():
             # Choose visualization mode
             viz_mode = st.radio(
                 "Visualization Mode:",
-                options=["Interactive (Plotly)", "Static Perfect Alignment (Matplotlib)"],
+                options=["Interactive", "Static"],
                 horizontal=True
             )
             
