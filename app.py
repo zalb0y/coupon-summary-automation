@@ -75,8 +75,39 @@ def filter_data(df, filter_stores, filter_mode, coupon_keywords, selected_coupon
     
     return df_filtered
 
-def create_line_chart_plotly(df_filtered):
+def create_line_chart_plotly(df_filtered, filter_stores, all_stores, filter_mode, coupon_keywords, selected_coupons):
     """Create interactive Plotly line chart"""
+    # Build dynamic title
+    # Store text
+    if len(filter_stores) == len(all_stores):
+        store_text = "All Stores"
+    elif len(filter_stores) <= 2:
+        store_text = ", ".join(filter_stores)
+    else:
+        first_two = ", ".join(filter_stores[:2])
+        remaining = len(filter_stores) - 2
+        store_text = f"{first_two}, +{remaining} more"
+    
+    # Coupon text - only show TM, DORMANT, NEW REGIS keywords
+    if filter_mode == 'Keywords':
+        display_keywords = []
+        keywords_lower = [kw.lower() for kw in coupon_keywords]
+        if 'tm' in keywords_lower:
+            display_keywords.append('TM')
+        if 'dormant' in keywords_lower:
+            display_keywords.append('DORMANT')
+        if 'new regis' in keywords_lower:
+            display_keywords.append('NEW REGIS')
+        coupon_text = ", ".join(display_keywords) if display_keywords else "Custom Keywords"
+    else:
+        if len(selected_coupons) <= 3:
+            coupon_text = ", ".join(selected_coupons)
+        else:
+            coupon_text = f"{len(selected_coupons)} Coupons"
+    
+    # Final title
+    title_text = f"<b>Total Coupons Usage</b><br><sub>Stores: {store_text} | Coupons: {coupon_text}</sub>"
+    
     # Aggregate data
     daily_trend = df_filtered.groupby(['SaleDy', 'CpnNm'])['Qty'].sum().reset_index()
     daily_trend = daily_trend.sort_values(['SaleDy', 'CpnNm'])
@@ -164,10 +195,10 @@ def create_line_chart_plotly(df_filtered):
     
     fig.update_layout(
         title=dict(
-            text='<b>Total Coupons Usage</b>',
+            text=title_text,
             x=0.5,
             xanchor='center',
-            font=dict(size=18, color='#1f77b4')
+            font=dict(size=16, color='#1f77b4')
         ),
         xaxis=dict(
             title='<b>Date</b>',
@@ -227,8 +258,36 @@ def create_data_table_df(df_filtered):
     
     return data_table
     
-def create_line_chart_matplotlib(df_filtered):
+def create_line_chart_matplotlib(df_filtered, filter_stores, all_stores, filter_mode, coupon_keywords, selected_coupons):
     """Create line chart with table using Matplotlib (perfect alignment)"""
+    # Build dynamic title
+    # Store text
+    if len(filter_stores) == len(all_stores):
+        store_text = "All Stores"
+    elif len(filter_stores) <= 2:
+        store_text = ", ".join(filter_stores)
+    else:
+        first_two = ", ".join(filter_stores[:2])
+        remaining = len(filter_stores) - 2
+        store_text = f"{first_two}, +{remaining} more"
+    
+    # Coupon text - only show TM, DORMANT, NEW REGIS keywords
+    if filter_mode == 'Keywords':
+        display_keywords = []
+        keywords_lower = [kw.lower() for kw in coupon_keywords]
+        if 'tm' in keywords_lower:
+            display_keywords.append('TM')
+        if 'dormant' in keywords_lower:
+            display_keywords.append('DORMANT')
+        if 'new regis' in keywords_lower:
+            display_keywords.append('NEW REGIS')
+        coupon_text = ", ".join(display_keywords) if display_keywords else "Custom Keywords"
+    else:
+        if len(selected_coupons) <= 3:
+            coupon_text = ", ".join(selected_coupons)
+        else:
+            coupon_text = f"{len(selected_coupons)} Coupons"
+    
     # Aggregate data
     daily_trend = df_filtered.groupby(['SaleDy', 'CpnNm'])['Qty'].sum().reset_index()
     daily_trend = daily_trend.sort_values(['SaleDy', 'CpnNm'])
@@ -266,8 +325,7 @@ def create_line_chart_matplotlib(df_filtered):
     max_qty = daily_trend['Qty'].max()
     y_max = max_qty * 1.3
     
-    # Add weekend shading FIRST (background) - MORE VISIBLE
-    weekend_added = False
+    # Add weekend shading FIRST (background) - NO legend entry
     for date in dates_list:
         if date.weekday() >= 5:  # Saturday or Sunday
             ax_chart.axvspan(
@@ -279,8 +337,8 @@ def create_line_chart_matplotlib(df_filtered):
                 linewidth=2,
                 linestyle='--',
                 zorder=0
+                # NO label = won't appear in legend
             )
-            weekend_added = True
     
     # Plot lines
     for i, coupon in enumerate(all_coupons):
@@ -331,9 +389,11 @@ def create_line_chart_matplotlib(df_filtered):
                 zorder=4
             )
     
-    # Chart formatting
-    ax_chart.set_title('Total Coupons Usage', 
-                       fontsize=18, fontweight='bold', pad=15, color='#1f77b4')
+    # Chart formatting with dynamic title
+    title_main = 'Total Coupons Usage'
+    title_sub = f'Stores: {store_text} | Coupons: {coupon_text}'
+    ax_chart.set_title(f'{title_main}\n{title_sub}', 
+                       fontsize=16, fontweight='bold', pad=15, color='#1f77b4')
     ax_chart.set_ylabel('Quantity', fontsize=13, fontweight='bold')
     ax_chart.set_ylim(0, y_max)
     ax_chart.grid(True, alpha=0.3, zorder=1, linestyle='--')
@@ -587,10 +647,10 @@ def main():
                 horizontal=True
             )
             
-            if viz_mode == "Interactive (Plotly)":
+            if viz_mode == "Interactive":
                 try:
                     # PLOTLY VERSION - Interactive
-                    fig = create_line_chart_plotly(df_filtered)
+                    fig = create_line_chart_plotly(df_filtered, filter_stores, all_stores, filter_mode, coupon_keywords, selected_coupons)
                     st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': True})
                     
                     st.markdown("---")
@@ -623,12 +683,12 @@ def main():
                 except Exception as e:
                     st.error(f"Error creating chart: {str(e)}")
             
-            else:  # Matplotlib
+            else:  # Static - Matplotlib
                 try:
-                    st.info("💡Weekend days are highlighted with orange borders.")
+                    st.info("💡 Weekend days are highlighted with orange borders.")
                     
                     # MATPLOTLIB VERSION - Perfect alignment
-                    img_buf = create_line_chart_matplotlib(df_filtered)
+                    img_buf = create_line_chart_matplotlib(df_filtered, filter_stores, all_stores, filter_mode, coupon_keywords, selected_coupons)
                     
                     st.image(img_buf, use_column_width=True)
                     
