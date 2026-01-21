@@ -78,22 +78,21 @@ def filter_data(df, filter_stores, filter_mode, coupon_keywords, selected_coupon
 def create_line_chart_plotly(df_filtered, filter_stores, all_stores, filter_mode, coupon_keywords, selected_coupons):
     """Create interactive Plotly line chart"""
     # Build dynamic title
-    # Store text
+    # Store text - max 5 stores
     if len(filter_stores) == len(all_stores):
         store_text = "All Stores"
-    elif len(filter_stores) <= 2:
+    elif len(filter_stores) <= 5:
         store_text = ", ".join(filter_stores)
     else:
-        first_two = ", ".join(filter_stores[:2])
-        remaining = len(filter_stores) - 2
-        store_text = f"{first_two}, +{remaining} more"
+        first_five = ", ".join(filter_stores[:5])
+        store_text = f"{first_five}, +more"
     
-    # Coupon text - only show TM, DORMANT, NEW REGIS keywords
+    # Coupon text - descriptive names
     if filter_mode == 'Keywords':
         display_keywords = []
         keywords_lower = [kw.lower() for kw in coupon_keywords]
         if 'tm' in keywords_lower:
-            display_keywords.append('TM')
+            display_keywords.append('TEBUS MURAH')
         if 'dormant' in keywords_lower:
             display_keywords.append('DORMANT')
         if 'new regis' in keywords_lower:
@@ -261,22 +260,21 @@ def create_data_table_df(df_filtered):
 def create_line_chart_matplotlib(df_filtered, filter_stores, all_stores, filter_mode, coupon_keywords, selected_coupons):
     """Create line chart with table using Matplotlib (perfect alignment)"""
     # Build dynamic title
-    # Store text
+    # Store text - max 5 stores
     if len(filter_stores) == len(all_stores):
         store_text = "All Stores"
-    elif len(filter_stores) <= 2:
+    elif len(filter_stores) <= 5:
         store_text = ", ".join(filter_stores)
     else:
-        first_two = ", ".join(filter_stores[:2])
-        remaining = len(filter_stores) - 2
-        store_text = f"{first_two}, +{remaining} more"
+        first_five = ", ".join(filter_stores[:5])
+        store_text = f"{first_five}, +more"
     
-    # Coupon text - only show TM, DORMANT, NEW REGIS keywords
+    # Coupon text - descriptive names
     if filter_mode == 'Keywords':
         display_keywords = []
         keywords_lower = [kw.lower() for kw in coupon_keywords]
         if 'tm' in keywords_lower:
-            display_keywords.append('TM')
+            display_keywords.append('TEBUS MURAH')
         if 'dormant' in keywords_lower:
             display_keywords.append('DORMANT')
         if 'new regis' in keywords_lower:
