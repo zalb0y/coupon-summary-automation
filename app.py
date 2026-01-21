@@ -164,7 +164,7 @@ def create_line_chart_plotly(df_filtered):
     
     fig.update_layout(
         title=dict(
-            text='<b>Total Coupons Redeemed</b>',
+            text='<b>Total Coupons Usage</b>',
             x=0.5,
             xanchor='center',
             font=dict(size=18, color='#1f77b4')
@@ -332,7 +332,7 @@ def create_line_chart_matplotlib(df_filtered):
             )
     
     # Chart formatting
-    ax_chart.set_title('Total Coupons Redeemed', 
+    ax_chart.set_title('Total Coupons Usage', 
                        fontsize=18, fontweight='bold', pad=15, color='#1f77b4')
     ax_chart.set_ylabel('Quantity', fontsize=13, fontweight='bold')
     ax_chart.set_ylim(0, y_max)
