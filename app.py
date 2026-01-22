@@ -232,7 +232,7 @@ def create_line_chart_plotly(df_filtered, filter_stores, all_stores, filter_mode
                 color='red' if is_weekend else 'black'
             ),
             textangle=tick_angle,
-            xanchor='right' if tick_angle < 0 else 'center',
+            xanchor='center',  # KUNCI: selalu center untuk posisi tengah
             yanchor='top'
         ))
     
