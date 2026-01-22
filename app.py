@@ -265,10 +265,7 @@ def create_line_chart_plotly(df_filtered, filter_stores, all_stores, filter_mode
             font=dict(size=16, color='#1f77b4')
         ),
         xaxis=dict(
-            title=dict(
-                text='<b>Date</b>',
-                standoff=60  # Jarak title dari axis - ditambah agar tidak nabrak
-            ),
+            title=None,  # Hapus title default, akan pakai annotation
             type='category',  # KUNCI: gunakan category agar semua label muncul
             categoryorder='array',
             categoryarray=tick_vals,
@@ -308,7 +305,20 @@ def create_line_chart_plotly(df_filtered, filter_stores, all_stores, filter_mode
         annotations=annotations_list,
         plot_bgcolor='white',
         font=dict(family='Arial', size=11),
-        margin=dict(t=100, b=140, l=60, r=200)  # Tambah margin atas dan bawah
+        margin=dict(t=100, b=160, l=60, r=200)  # Tambah margin bawah untuk Date title
+    )
+    
+    # Tambahkan annotation untuk judul "Date" di bawah label tanggal
+    fig.add_annotation(
+        xref="paper",
+        yref="paper",
+        x=0.5,
+        y=-0.22,  # Posisi di bawah label tanggal
+        text="<b>Date</b>",
+        showarrow=False,
+        font=dict(size=12, color='black'),
+        xanchor='center',
+        yanchor='top'
     )
     
     return fig
