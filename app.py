@@ -198,6 +198,14 @@ def create_line_chart_plotly(df_filtered, filter_stores, all_stores, filter_mode
     tick_vals = list(dates_list)
     tick_texts = [d.strftime('%d-%b') for d in dates_list]
     
+    # Buat warna untuk setiap tick label (merah untuk weekend)
+    tick_colors = []
+    for d in dates_list:
+        if d.weekday() >= 5:  # Saturday or Sunday
+            tick_colors.append('red')
+        else:
+            tick_colors.append('black')
+    
     # Hitung dinamis ukuran font berdasarkan jumlah tanggal
     num_dates = len(dates_list)
     if num_dates <= 10:
@@ -232,7 +240,10 @@ def create_line_chart_plotly(df_filtered, filter_stores, all_stores, filter_mode
             tickvals=tick_vals,
             ticktext=tick_texts,
             tickangle=tick_angle,
-            tickfont=dict(size=tick_font_size),
+            tickfont=dict(
+                size=tick_font_size,
+                color=tick_colors  # Warna berbeda untuk weekend
+            ),
             showgrid=True,
             gridcolor='lightgray',
             gridwidth=0.5,
@@ -460,6 +471,16 @@ def create_line_chart_matplotlib(df_filtered, filter_stores, all_stores, filter_
     
     ax_chart.tick_params(axis='x', rotation=rotation, labelsize=tick_fontsize)
     plt.setp(ax_chart.xaxis.get_majorticklabels(), ha='right')  # Align labels
+    
+    # ========== WARNA MERAH UNTUK WEEKEND ==========
+    # Set warna label berdasarkan weekend atau bukan
+    for i, (tick_label, date) in enumerate(zip(ax_chart.xaxis.get_ticklabels(), dates_list)):
+        if date.weekday() >= 5:  # Saturday (5) or Sunday (6)
+            tick_label.set_color('red')
+            tick_label.set_fontweight('bold')
+        else:
+            tick_label.set_color('black')
+    
     ax_chart.set_xlabel('Date', fontsize=12, fontweight='bold', labelpad=10)
     
     # Add horizontal line at y=0
