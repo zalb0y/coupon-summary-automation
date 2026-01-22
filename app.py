@@ -3,7 +3,7 @@ import pandas as pd
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
 import io
-import matplotlib.pyplot as plt
+import matplotlib.pyplot as pltf
 import matplotlib.dates as mdates
 from io import BytesIO
 import base64
@@ -362,7 +362,7 @@ def create_line_chart_matplotlib(df_filtered, filter_stores, all_stores, filter_
         if 'dormant' in keywords_lower:
             display_keywords.append('DORMANT')
         if 'new regis' in keywords_lower or 'nr' in keywords_lower:  # Tambah 'nr'
-            display_keywords.append('NR')
+            display_keywords.append('NEW REGIS')
         coupon_text = ", ".join(display_keywords) if display_keywords else "Custom Keywords"
     else:
         if len(selected_coupons) <= 3:
