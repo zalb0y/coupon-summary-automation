@@ -119,14 +119,15 @@ def create_line_chart_plotly(df_filtered, filter_stores, all_stores, filter_mode
     annotations_list = []
     weekend_labeled = False
     
-    for date in dates_list:
+    for i, date in enumerate(dates_list):
         if date.weekday() >= 5:  # Saturday or Sunday
+            # Untuk category axis, gunakan index sebagai posisi
             shapes.append(dict(
                 type="rect",
                 xref="x",
                 yref="paper",
-                x0=date - pd.Timedelta(hours=12),
-                x1=date + pd.Timedelta(hours=12),
+                x0=i - 0.5,  # Gunakan index untuk category axis
+                x1=i + 0.5,
                 y0=0,
                 y1=1,
                 fillcolor="#FFE4B5",
@@ -140,7 +141,7 @@ def create_line_chart_plotly(df_filtered, filter_stores, all_stores, filter_mode
                 annotations_list.append(dict(
                     xref="x",
                     yref="paper",
-                    x=date,
+                    x=i,  # Gunakan index
                     y=1.02,
                     text="🌴 Weekend",
                     showarrow=False,
@@ -193,8 +194,8 @@ def create_line_chart_plotly(df_filtered, filter_stores, all_stores, filter_mode
         ))
     
     # ========== REVISI: Tampilkan SEMUA tanggal di sumbu X ==========
-    # Buat list tick values dan tick labels
-    tick_vals = dates_list
+    # Buat list tick values dan tick labels - KONVERSI KE STRING untuk memaksa tampil semua
+    tick_vals = list(dates_list)
     tick_texts = [d.strftime('%d-%b') for d in dates_list]
     
     # Hitung dinamis ukuran font berdasarkan jumlah tanggal
@@ -212,6 +213,9 @@ def create_line_chart_plotly(df_filtered, filter_stores, all_stores, filter_mode
         tick_font_size = 8
         tick_angle = -90
     
+    # Hitung tinggi chart berdasarkan jumlah tanggal
+    chart_height = max(600, 500 + num_dates * 5)
+    
     fig.update_layout(
         title=dict(
             text=title_text,
@@ -221,15 +225,19 @@ def create_line_chart_plotly(df_filtered, filter_stores, all_stores, filter_mode
         ),
         xaxis=dict(
             title='<b>Date</b>',
-            tickmode='array',  # PENTING: gunakan array mode
-            tickvals=tick_vals,  # PENTING: set nilai tick secara eksplisit
-            ticktext=tick_texts,  # PENTING: set label tick secara eksplisit
+            type='category',  # KUNCI: gunakan category agar semua label muncul
+            categoryorder='array',
+            categoryarray=tick_vals,
+            tickmode='array',
+            tickvals=tick_vals,
+            ticktext=tick_texts,
             tickangle=tick_angle,
             tickfont=dict(size=tick_font_size),
             showgrid=True,
             gridcolor='lightgray',
             gridwidth=0.5,
-            dtick='D1'  # Interval 1 hari
+            showticklabels=True,
+            ticklabelmode='instant'
         ),
         yaxis=dict(
             title='<b>Quantity</b>',
@@ -240,7 +248,7 @@ def create_line_chart_plotly(df_filtered, filter_stores, all_stores, filter_mode
             range=[0, y_range_max]
         ),
         hovermode='x unified',
-        height=600,
+        height=chart_height,
         showlegend=True,
         legend=dict(
             orientation='v',
@@ -258,7 +266,7 @@ def create_line_chart_plotly(df_filtered, filter_stores, all_stores, filter_mode
         annotations=annotations_list,
         plot_bgcolor='white',
         font=dict(family='Arial', size=11),
-        margin=dict(t=80, b=100, l=60, r=200)  # Tambah margin bawah untuk label
+        margin=dict(t=80, b=120, l=60, r=200)  # Tambah margin bawah untuk label
     )
     
     return fig
@@ -432,9 +440,9 @@ def create_line_chart_matplotlib(df_filtered, filter_stores, all_stores, filter_
     ax_chart.set_xlim(dates_list[0] - pd.Timedelta(hours=12), 
                       dates_list[-1] + pd.Timedelta(hours=12))
     
-    # Gunakan FixedLocator untuk memastikan semua tanggal muncul
-    ax_chart.xaxis.set_major_locator(mdates.DayLocator(interval=1))  # Setiap hari
-    ax_chart.xaxis.set_major_formatter(mdates.DateFormatter('%d-%b'))
+    # KUNCI: Set tick positions secara eksplisit untuk SEMUA tanggal
+    ax_chart.set_xticks(dates_list)
+    ax_chart.set_xticklabels([d.strftime('%d-%b') for d in dates_list])
     
     # Sesuaikan ukuran font dan rotasi berdasarkan jumlah tanggal
     if num_dates <= 10:
@@ -451,6 +459,7 @@ def create_line_chart_matplotlib(df_filtered, filter_stores, all_stores, filter_
         rotation = 90
     
     ax_chart.tick_params(axis='x', rotation=rotation, labelsize=tick_fontsize)
+    plt.setp(ax_chart.xaxis.get_majorticklabels(), ha='right')  # Align labels
     ax_chart.set_xlabel('Date', fontsize=12, fontweight='bold', labelpad=10)
     
     # Add horizontal line at y=0
