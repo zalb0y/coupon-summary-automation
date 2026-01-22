@@ -51,6 +51,7 @@ VOUCHER_NAME_MAPPING = {
     'MKT_006 TM POT 5K MIN 100K': 'TM karton',
     'MKT_001 NEW REGIS POT 20.5K': 'NR KA SPC RCG',
     'MKT_001 NEW REGIS POT 17.5K MIN 200K': 'NR GULA 1KG',
+    'MKT_002 DORMANT PROF 20K MIN 300K': 'Dormant',
 }
 
 def rename_vouchers(df):
@@ -114,7 +115,7 @@ def create_line_chart_plotly(df_filtered, filter_stores, all_stores, filter_mode
         if 'dormant' in keywords_lower:
             display_keywords.append('DORMANT')
         if 'new regis' in keywords_lower:
-            display_keywords.append('NEW REGIS')
+            display_keywords.append('NR')  # Diubah dari NEW REGIS ke NR
         coupon_text = ", ".join(display_keywords) if display_keywords else "Custom Keywords"
     else:
         if len(selected_coupons) <= 3:
@@ -348,7 +349,7 @@ def create_line_chart_matplotlib(df_filtered, filter_stores, all_stores, filter_
         if 'dormant' in keywords_lower:
             display_keywords.append('DORMANT')
         if 'new regis' in keywords_lower:
-            display_keywords.append('NEW REGIS')
+            display_keywords.append('NR')  # Diubah dari NEW REGIS ke NR
         coupon_text = ", ".join(display_keywords) if display_keywords else "Custom Keywords"
     else:
         if len(selected_coupons) <= 3:
