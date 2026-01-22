@@ -115,7 +115,7 @@ def create_line_chart_plotly(df_filtered, filter_stores, all_stores, filter_mode
         if 'dormant' in keywords_lower:
             display_keywords.append('DORMANT')
         if 'new regis' in keywords_lower or 'nr' in keywords_lower:  # Tambah 'nr'
-            display_keywords.append('New Regis')
+            display_keywords.append('NEW REGIS')
         coupon_text = ", ".join(display_keywords) if display_keywords else "Custom Keywords"
     else:
         if len(selected_coupons) <= 3:
