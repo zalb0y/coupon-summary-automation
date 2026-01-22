@@ -43,11 +43,29 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # Helper Functions
+
+# ========== VOUCHER NAME MAPPING ==========
+VOUCHER_NAME_MAPPING = {
+    'MKT_006 TM POT 3K': 'TM telur',
+    'MKT_006 TM POT 3K 2': 'TM beras',
+    'MKT_006 TM POT 5K MIN 100K': 'TM karton',
+    'MKT_001 NEW REGIS POT 20.5K': 'NR KA SPC RCG',
+    'MKT_001 NEW REGIS POT 17.5K MIN 200K': 'NR GULA 1KG',
+}
+
+def rename_vouchers(df):
+    """Rename voucher names based on mapping"""
+    df = df.copy()
+    df['CpnNm'] = df['CpnNm'].replace(VOUCHER_NAME_MAPPING)
+    return df
+
 @st.cache_data
 def load_data(file):
     """Load and process Excel data"""
     df = pd.read_excel(file)
     df['SaleDy'] = pd.to_datetime(df['SaleDy'].astype(str), format='%Y%m%d')
+    # Apply voucher name mapping
+    df = rename_vouchers(df)
     return df
 
 def filter_data(df, filter_stores, filter_mode, coupon_keywords, selected_coupons, date_range):
@@ -479,7 +497,7 @@ def create_line_chart_matplotlib(df_filtered, filter_stores, all_stores, filter_
         rotation = 90
     
     ax_chart.tick_params(axis='x', rotation=rotation, labelsize=tick_fontsize)
-    plt.setp(ax_chart.xaxis.get_majorticklabels(), ha='right')  # Align labels
+    plt.setp(ax_chart.xaxis.get_majorticklabels(), ha='center', rotation_mode='anchor')  # KUNCI: ha='center' untuk posisi tengah
     
     # ========== WARNA MERAH UNTUK WEEKEND ==========
     # Set warna label berdasarkan weekend atau bukan
