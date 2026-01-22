@@ -57,6 +57,8 @@ VOUCHER_NAME_MAPPING = {
 def rename_vouchers(df):
     """Rename voucher names based on mapping"""
     df = df.copy()
+    # Strip whitespace dan replace
+    df['CpnNm'] = df['CpnNm'].str.strip()
     df['CpnNm'] = df['CpnNm'].replace(VOUCHER_NAME_MAPPING)
     return df
 
@@ -115,7 +117,7 @@ def create_line_chart_plotly(df_filtered, filter_stores, all_stores, filter_mode
         if 'dormant' in keywords_lower:
             display_keywords.append('DORMANT')
         if 'new regis' in keywords_lower or 'nr' in keywords_lower:  # Tambah 'nr'
-            display_keywords.append('NEW REGIS')
+            display_keywords.append('NR')
         coupon_text = ", ".join(display_keywords) if display_keywords else "Custom Keywords"
     else:
         if len(selected_coupons) <= 3:
@@ -243,7 +245,7 @@ def create_line_chart_plotly(df_filtered, filter_stores, all_stores, filter_mode
             xref="x",
             yref="paper",
             x=i,  # posisi berdasarkan index (category axis)
-            y=-0.08,  # di bawah axis
+            y=-0.12,  # di bawah axis - lebih jauh agar tidak nabrak
             text=f"<b>{date.strftime('%d-%b')}</b>" if is_weekend else date.strftime('%d-%b'),
             showarrow=False,
             font=dict(
@@ -265,7 +267,7 @@ def create_line_chart_plotly(df_filtered, filter_stores, all_stores, filter_mode
         xaxis=dict(
             title=dict(
                 text='<b>Date</b>',
-                standoff=40  # Jarak title dari axis
+                standoff=60  # Jarak title dari axis - ditambah agar tidak nabrak
             ),
             type='category',  # KUNCI: gunakan category agar semua label muncul
             categoryorder='array',
@@ -276,7 +278,8 @@ def create_line_chart_plotly(df_filtered, filter_stores, all_stores, filter_mode
             showticklabels=True,  # Tetap True tapi kosong, diganti annotations
             showgrid=True,
             gridcolor='lightgray',
-            gridwidth=0.5
+            gridwidth=0.5,
+            side='bottom'  # Pastikan axis di bawah
         ),
         yaxis=dict(
             title='<b>Quantity</b>',
@@ -305,7 +308,7 @@ def create_line_chart_plotly(df_filtered, filter_stores, all_stores, filter_mode
         annotations=annotations_list,
         plot_bgcolor='white',
         font=dict(family='Arial', size=11),
-        margin=dict(t=80, b=120, l=60, r=200)  # Tambah margin bawah untuk label
+        margin=dict(t=100, b=140, l=60, r=200)  # Tambah margin atas dan bawah
     )
     
     return fig
@@ -349,7 +352,7 @@ def create_line_chart_matplotlib(df_filtered, filter_stores, all_stores, filter_
         if 'dormant' in keywords_lower:
             display_keywords.append('DORMANT')
         if 'new regis' in keywords_lower or 'nr' in keywords_lower:  # Tambah 'nr'
-            display_keywords.append('NEW REGIS')
+            display_keywords.append('NR')
         coupon_text = ", ".join(display_keywords) if display_keywords else "Custom Keywords"
     else:
         if len(selected_coupons) <= 3:
@@ -376,13 +379,13 @@ def create_line_chart_matplotlib(df_filtered, filter_stores, all_stores, filter_
     # ========== REVISI: Sesuaikan ukuran figure berdasarkan jumlah tanggal ==========
     # Lebar minimal 16, tambah 0.4 inch per tanggal jika lebih dari 15 tanggal
     fig_width = max(16, 10 + num_dates * 0.5)
-    fig_height = 12
+    fig_height = 11  # Sedikit dikurangi
     
     # Create figure
     fig = plt.figure(figsize=(fig_width, fig_height))
     
-    # Use GridSpec for better control
-    gs = gridspec.GridSpec(2, 1, figure=fig, height_ratios=[2, 1], hspace=0.4)
+    # Use GridSpec for better control - kurangi hspace untuk dekatkan tabel
+    gs = gridspec.GridSpec(2, 1, figure=fig, height_ratios=[2.5, 1], hspace=0.25)
     
     # Chart axes
     ax_chart = fig.add_subplot(gs[0])
@@ -396,9 +399,9 @@ def create_line_chart_matplotlib(df_filtered, filter_stores, all_stores, filter_
     
     all_coupons = sorted(df_filtered['CpnNm'].unique())
     
-    # Find max for Y range
+    # Find max for Y range - tambah space lebih untuk label agar tidak nabrak
     max_qty = daily_trend['Qty'].max()
-    y_max = max_qty * 1.3
+    y_max = max_qty * 1.4  # Ditambah dari 1.3 ke 1.4 untuk space label
     
     # Add weekend shading FIRST (background) - NO legend entry
     for date in dates_list:
@@ -497,7 +500,7 @@ def create_line_chart_matplotlib(df_filtered, filter_stores, all_stores, filter_
         tick_fontsize = 7
         rotation = 90
     
-    ax_chart.tick_params(axis='x', rotation=rotation, labelsize=tick_fontsize)
+    ax_chart.tick_params(axis='x', rotation=rotation, labelsize=tick_fontsize, pad=8)  # Tambah pad untuk jarak
     plt.setp(ax_chart.xaxis.get_majorticklabels(), ha='center', rotation_mode='anchor')  # KUNCI: ha='center' untuk posisi tengah
     
     # ========== WARNA MERAH UNTUK WEEKEND ==========
@@ -509,7 +512,7 @@ def create_line_chart_matplotlib(df_filtered, filter_stores, all_stores, filter_
         else:
             tick_label.set_color('black')
     
-    ax_chart.set_xlabel('Date', fontsize=12, fontweight='bold', labelpad=10)
+    ax_chart.set_xlabel('Date', fontsize=12, fontweight='bold', labelpad=15)  # Tambah labelpad
     
     # Add horizontal line at y=0
     ax_chart.axhline(y=0, color='black', linewidth=1, zorder=2)
