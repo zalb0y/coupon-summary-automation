@@ -198,14 +198,6 @@ def create_line_chart_plotly(df_filtered, filter_stores, all_stores, filter_mode
     tick_vals = list(dates_list)
     tick_texts = [d.strftime('%d-%b') for d in dates_list]
     
-    # Buat warna untuk setiap tick label (merah untuk weekend)
-    tick_colors = []
-    for d in dates_list:
-        if d.weekday() >= 5:  # Saturday or Sunday
-            tick_colors.append('red')
-        else:
-            tick_colors.append('black')
-    
     # Hitung dinamis ukuran font berdasarkan jumlah tanggal
     num_dates = len(dates_list)
     if num_dates <= 10:
@@ -224,6 +216,26 @@ def create_line_chart_plotly(df_filtered, filter_stores, all_stores, filter_mode
     # Hitung tinggi chart berdasarkan jumlah tanggal
     chart_height = max(600, 500 + num_dates * 5)
     
+    # ========== WARNA MERAH UNTUK WEEKEND MENGGUNAKAN ANNOTATIONS ==========
+    # Buat annotations untuk setiap tick label dengan warna berbeda
+    for i, date in enumerate(dates_list):
+        is_weekend = date.weekday() >= 5
+        annotations_list.append(dict(
+            xref="x",
+            yref="paper",
+            x=i,  # posisi berdasarkan index (category axis)
+            y=-0.08,  # di bawah axis
+            text=f"<b>{date.strftime('%d-%b')}</b>" if is_weekend else date.strftime('%d-%b'),
+            showarrow=False,
+            font=dict(
+                size=tick_font_size,
+                color='red' if is_weekend else 'black'
+            ),
+            textangle=tick_angle,
+            xanchor='right' if tick_angle < 0 else 'center',
+            yanchor='top'
+        ))
+    
     fig.update_layout(
         title=dict(
             text=title_text,
@@ -232,23 +244,20 @@ def create_line_chart_plotly(df_filtered, filter_stores, all_stores, filter_mode
             font=dict(size=16, color='#1f77b4')
         ),
         xaxis=dict(
-            title='<b>Date</b>',
+            title=dict(
+                text='<b>Date</b>',
+                standoff=40  # Jarak title dari axis
+            ),
             type='category',  # KUNCI: gunakan category agar semua label muncul
             categoryorder='array',
             categoryarray=tick_vals,
             tickmode='array',
             tickvals=tick_vals,
-            ticktext=tick_texts,
-            tickangle=tick_angle,
-            tickfont=dict(
-                size=tick_font_size,
-                color=tick_colors  # Warna berbeda untuk weekend
-            ),
+            ticktext=[''] * len(tick_vals),  # Kosongkan default tick labels
+            showticklabels=True,  # Tetap True tapi kosong, diganti annotations
             showgrid=True,
             gridcolor='lightgray',
-            gridwidth=0.5,
-            showticklabels=True,
-            ticklabelmode='instant'
+            gridwidth=0.5
         ),
         yaxis=dict(
             title='<b>Quantity</b>',
