@@ -262,7 +262,7 @@ def create_line_chart_plotly(df_filtered, filter_stores, all_stores, filter_mode
             text=title_text,
             x=0.5,
             xanchor='center',
-            font=dict(size=16, color='Black')
+            font=dict(size=16, color='#1f77b4')
         ),
         xaxis=dict(
             title=None,  # Hapus title default, akan pakai annotation
@@ -295,7 +295,7 @@ def create_line_chart_plotly(df_filtered, filter_stores, all_stores, filter_mode
             y=1,
             xanchor='left',
             x=1.02,
-            font=dict(size=9),
+            font=dict(size=9, color='black'),  # Tambahkan color='black'
             bgcolor='rgba(255,255,255,0.9)',
             bordercolor='gray',
             borderwidth=1
