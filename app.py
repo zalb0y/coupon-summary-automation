@@ -701,7 +701,7 @@ def main():
         )
         
         if filter_mode == 'Keywords':
-            default_keywords = ['tm', 'new regis', 'dormant']
+            default_keywords = ['tm', 'ka', '1kg', 'dormant']
             coupon_keywords_input = st.text_input(
                 "Enter keywords (comma-separated)",
                 value=', '.join(default_keywords)
