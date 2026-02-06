@@ -316,7 +316,7 @@ def create_line_chart_plotly(df_filtered, filter_stores, all_stores, filter_mode
         y=-0.22,  # Posisi di bawah label tanggal
         text="<b>Date</b>",
         showarrow=False,
-        font=dict(size=12, color='black'),
+        font=dict(size=12, color='white'),
         xanchor='center',
         yanchor='top'
     )
