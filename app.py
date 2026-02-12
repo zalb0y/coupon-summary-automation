@@ -44,31 +44,13 @@ st.markdown("""
 
 # Helper Functions
 
-# ========== VOUCHER NAME MAPPING ==========
-VOUCHER_NAME_MAPPING = {
-    'MKT_006 TM POT 3K': 'TM TELUR',
-    'MKT_006 TM POT 3K 2': 'TM BERAS',
-    'MKT_006 TM POT 5K MIN 100K': 'TM KARTON',
-    'MKT_001 NEW REGIS POT 20.5K': 'KA SPC RCG',
-    'MKT_001 NEW REGIS POT 17.5K MIN 200K': 'GULA 1KG',
-    'MKT_002 DORMANT PROF 20K MIN 300K': 'DORMANT',
-}
-
-def rename_vouchers(df):
-    """Rename voucher names based on mapping"""
-    df = df.copy()
-    # Strip whitespace dan replace
-    df['CpnNm'] = df['CpnNm'].str.strip()
-    df['CpnNm'] = df['CpnNm'].replace(VOUCHER_NAME_MAPPING)
-    return df
-
 @st.cache_data
 def load_data(file):
     """Load and process Excel data"""
     df = pd.read_excel(file)
     df['SaleDy'] = pd.to_datetime(df['SaleDy'].astype(str), format='%Y%m%d')
-    # Apply voucher name mapping
-    df = rename_vouchers(df)
+    # Strip whitespace from coupon names
+    df['CpnNm'] = df['CpnNm'].str.strip()
     return df
 
 def filter_data(df, filter_stores, filter_mode, coupon_keywords, selected_coupons, date_range):
@@ -116,7 +98,7 @@ def create_line_chart_plotly(df_filtered, filter_stores, all_stores, filter_mode
             display_keywords.append('TEBUS MURAH')
         if 'dormant' in keywords_lower:
             display_keywords.append('DORMANT')
-        if 'new regis' in keywords_lower or 'nr' in keywords_lower:  # Tambah 'nr'
+        if 'new regis' in keywords_lower or 'nr' in keywords_lower:
             display_keywords.append('NEW REGIS')
         coupon_text = ", ".join(display_keywords) if display_keywords else "Custom Keywords"
     else:
@@ -142,12 +124,11 @@ def create_line_chart_plotly(df_filtered, filter_stores, all_stores, filter_mode
     
     for i, date in enumerate(dates_list):
         if date.weekday() >= 5:  # Saturday or Sunday
-            # Untuk category axis, gunakan index sebagai posisi
             shapes.append(dict(
                 type="rect",
                 xref="x",
                 yref="paper",
-                x0=i - 0.5,  # Gunakan index untuk category axis
+                x0=i - 0.5,
                 x1=i + 0.5,
                 y0=0,
                 y1=1,
@@ -162,7 +143,7 @@ def create_line_chart_plotly(df_filtered, filter_stores, all_stores, filter_mode
                 annotations_list.append(dict(
                     xref="x",
                     yref="paper",
-                    x=i,  # Gunakan index
+                    x=i,
                     y=1.02,
                     text="🌴 Weekend",
                     showarrow=False,
@@ -175,7 +156,7 @@ def create_line_chart_plotly(df_filtered, filter_stores, all_stores, filter_mode
               '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
     
     max_qty = daily_trend['Qty'].max()
-    y_range_max = max_qty * 1.3  # Extra space for labels
+    y_range_max = max_qty * 1.3
     
     all_coupons = sorted(df_filtered['CpnNm'].unique())
     
@@ -192,7 +173,6 @@ def create_line_chart_plotly(df_filtered, filter_stores, all_stores, filter_mode
             else:
                 text_positions.append('top center')
         
-        # Add trace with text labels (will hide when legend is toggled)
         fig.add_trace(go.Scatter(
             x=coupon_data['SaleDy'],
             y=coupon_data['Qty'],
@@ -214,12 +194,9 @@ def create_line_chart_plotly(df_filtered, filter_stores, all_stores, filter_mode
                           '<extra></extra>'
         ))
     
-    # ========== REVISI: Tampilkan SEMUA tanggal di sumbu X ==========
-    # Buat list tick values dan tick labels - KONVERSI KE STRING untuk memaksa tampil semua
     tick_vals = list(dates_list)
     tick_texts = [d.strftime('%d-%b') for d in dates_list]
     
-    # Hitung dinamis ukuran font berdasarkan jumlah tanggal
     num_dates = len(dates_list)
     if num_dates <= 10:
         tick_font_size = 11
@@ -234,18 +211,15 @@ def create_line_chart_plotly(df_filtered, filter_stores, all_stores, filter_mode
         tick_font_size = 8
         tick_angle = -90
     
-    # Hitung tinggi chart berdasarkan jumlah tanggal
     chart_height = max(600, 500 + num_dates * 5)
     
-    # ========== WARNA MERAH UNTUK WEEKEND MENGGUNAKAN ANNOTATIONS ==========
-    # Buat annotations untuk setiap tick label dengan warna berbeda
     for i, date in enumerate(dates_list):
         is_weekend = date.weekday() >= 5
         annotations_list.append(dict(
             xref="x",
             yref="paper",
-            x=i,  # posisi berdasarkan index (category axis)
-            y=-0.12,  # di bawah axis - lebih jauh agar tidak nabrak
+            x=i,
+            y=-0.12,
             text=f"<b>{date.strftime('%d-%b')}</b>" if is_weekend else date.strftime('%d-%b'),
             showarrow=False,
             font=dict(
@@ -253,7 +227,7 @@ def create_line_chart_plotly(df_filtered, filter_stores, all_stores, filter_mode
                 color='red' if is_weekend else 'white'
             ),
             textangle=tick_angle,
-            xanchor='center',  # KUNCI: selalu center untuk posisi tengah
+            xanchor='center',
             yanchor='top'
         ))
     
@@ -265,18 +239,18 @@ def create_line_chart_plotly(df_filtered, filter_stores, all_stores, filter_mode
             font=dict(size=16, color='#1f77b4')
         ),
         xaxis=dict(
-            title=None,  # Hapus title default, akan pakai annotation
-            type='category',  # KUNCI: gunakan category agar semua label muncul
+            title=None,
+            type='category',
             categoryorder='array',
             categoryarray=tick_vals,
             tickmode='array',
             tickvals=tick_vals,
-            ticktext=[''] * len(tick_vals),  # Kosongkan default tick labels
-            showticklabels=True,  # Tetap True tapi kosong, diganti annotations
+            ticktext=[''] * len(tick_vals),
+            showticklabels=True,
             showgrid=True,
             gridcolor='lightgray',
             gridwidth=0.5,
-            side='bottom'  # Pastikan axis di bawah
+            side='bottom'
         ),
         yaxis=dict(
             title='<b>Quantity</b>',
@@ -295,25 +269,23 @@ def create_line_chart_plotly(df_filtered, filter_stores, all_stores, filter_mode
             y=1,
             xanchor='left',
             x=1.02,
-            font=dict(size=9, color='black'),  # Tambahkan color='black'
+            font=dict(size=9, color='black'),
             bgcolor='rgba(255,255,255,0.9)',
             bordercolor='gray',
             borderwidth=1
         ),
-        # Add weekend shapes here (NOT in legend)
         shapes=shapes,
         annotations=annotations_list,
         plot_bgcolor='white',
         font=dict(family='Arial', size=11),
-        margin=dict(t=100, b=160, l=60, r=200)  # Tambah margin bawah untuk Date title
+        margin=dict(t=100, b=160, l=60, r=200)
     )
     
-    # Tambahkan annotation untuk judul "Date" di bawah label tanggal
     fig.add_annotation(
         xref="paper",
         yref="paper",
         x=0.5,
-        y=-0.22,  # Posisi di bawah label tanggal
+        y=-0.22,
         text="<b>Date</b>",
         showarrow=False,
         font=dict(size=12, color='white'),
@@ -344,7 +316,6 @@ def create_data_table_df(df_filtered):
 def create_line_chart_matplotlib(df_filtered, filter_stores, all_stores, filter_mode, coupon_keywords, selected_coupons):
     """Create line chart with table using Matplotlib (perfect alignment)"""
     # Build dynamic title
-    # Store text - max 5 stores
     if len(filter_stores) == len(all_stores):
         store_text = "All Stores"
     elif len(filter_stores) <= 5:
@@ -353,7 +324,6 @@ def create_line_chart_matplotlib(df_filtered, filter_stores, all_stores, filter_
         first_five = ", ".join(filter_stores[:5])
         store_text = f"{first_five}, +more"
     
-    # Coupon text - descriptive names
     if filter_mode == 'Keywords':
         display_keywords = []
         keywords_lower = [kw.lower() for kw in coupon_keywords]
@@ -361,7 +331,7 @@ def create_line_chart_matplotlib(df_filtered, filter_stores, all_stores, filter_
             display_keywords.append('TEBUS MURAH')
         if 'dormant' in keywords_lower:
             display_keywords.append('DORMANT')
-        if 'new regis' in keywords_lower or 'nr' in keywords_lower:  # Tambah 'nr'
+        if 'new regis' in keywords_lower or 'nr' in keywords_lower:
             display_keywords.append('NEW REGIS')
         coupon_text = ", ".join(display_keywords) if display_keywords else "Custom Keywords"
     else:
@@ -386,53 +356,40 @@ def create_line_chart_matplotlib(df_filtered, filter_stores, all_stores, filter_
     dates_list = sorted(data_table.columns)
     num_dates = len(dates_list)
     
-    # ========== REVISI: Sesuaikan ukuran figure berdasarkan jumlah tanggal ==========
-    # Lebar minimal 16, tambah 0.4 inch per tanggal jika lebih dari 15 tanggal
     fig_width = max(16, 10 + num_dates * 0.5)
-    fig_height = 11  # Sedikit dikurangi
+    fig_height = 11
     
-    # Create figure
     fig = plt.figure(figsize=(fig_width, fig_height))
     
-    # Use GridSpec for better control - kurangi hspace untuk dekatkan tabel
     gs = gridspec.GridSpec(2, 1, figure=fig, height_ratios=[2.5, 1], hspace=0.25)
     
-    # Chart axes
     ax_chart = fig.add_subplot(gs[0])
-    
-    # Table axes
     ax_table = fig.add_subplot(gs[1])
     
-    # Colors
     colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', 
               '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
     
     all_coupons = sorted(df_filtered['CpnNm'].unique())
     
-    # Find max for Y range - tambah space lebih untuk label agar tidak nabrak
     max_qty = daily_trend['Qty'].max()
-    y_max = max_qty * 1.4  # Ditambah dari 1.3 ke 1.4 untuk space label
+    y_max = max_qty * 1.4
     
-    # Add weekend shading FIRST (background) - NO legend entry
     for date in dates_list:
-        if date.weekday() >= 5:  # Saturday or Sunday
+        if date.weekday() >= 5:
             ax_chart.axvspan(
                 date - pd.Timedelta(hours=12), 
                 date + pd.Timedelta(hours=12),
                 alpha=0.35,
-                color='#FFE4B5',  # Moccasin
-                edgecolor='#FFA500',  # Orange border
+                color='#FFE4B5',
+                edgecolor='#FFA500',
                 linewidth=2,
                 linestyle='--',
                 zorder=0
-                # NO label = won't appear in legend
             )
     
-    # Plot lines
     for i, coupon in enumerate(all_coupons):
         coupon_data = daily_trend[daily_trend['CpnNm'] == coupon]
         
-        # Plot line
         ax_chart.plot(
             coupon_data['SaleDy'], 
             coupon_data['Qty'],
@@ -444,9 +401,7 @@ def create_line_chart_matplotlib(df_filtered, filter_stores, all_stores, filter_
             zorder=3
         )
         
-        # Add data labels with white background
         for idx, row in coupon_data.iterrows():
-            # Smart positioning
             if row['Qty'] > (max_qty * 0.75):
                 va = 'bottom'
                 offset = 20
@@ -477,7 +432,6 @@ def create_line_chart_matplotlib(df_filtered, filter_stores, all_stores, filter_
                 zorder=4
             )
     
-    # Chart formatting with dynamic title
     title_main = 'Total Coupons Usage'
     title_sub = f'Stores: {store_text} | Coupons: {coupon_text}'
     ax_chart.set_title(f'{title_main}\n{title_sub}', 
@@ -487,16 +441,12 @@ def create_line_chart_matplotlib(df_filtered, filter_stores, all_stores, filter_
     ax_chart.grid(True, alpha=0.3, zorder=1, linestyle='--')
     ax_chart.legend(loc='upper left', bbox_to_anchor=(1.01, 1), fontsize=9, frameon=True, shadow=True)
     
-    # ========== REVISI: Set X-axis untuk menampilkan SEMUA tanggal ==========
-    # Set batas x-axis
     ax_chart.set_xlim(dates_list[0] - pd.Timedelta(hours=12), 
                       dates_list[-1] + pd.Timedelta(hours=12))
     
-    # KUNCI: Set tick positions secara eksplisit untuk SEMUA tanggal
     ax_chart.set_xticks(dates_list)
     ax_chart.set_xticklabels([d.strftime('%d-%b') for d in dates_list])
     
-    # Sesuaikan ukuran font dan rotasi berdasarkan jumlah tanggal
     if num_dates <= 10:
         tick_fontsize = 10
         rotation = 45
@@ -510,21 +460,17 @@ def create_line_chart_matplotlib(df_filtered, filter_stores, all_stores, filter_
         tick_fontsize = 7
         rotation = 90
     
-    ax_chart.tick_params(axis='x', rotation=rotation, labelsize=tick_fontsize, pad=8)  # Tambah pad untuk jarak
-    plt.setp(ax_chart.xaxis.get_majorticklabels(), ha='center', rotation_mode='anchor')  # KUNCI: ha='center' untuk posisi tengah
+    ax_chart.tick_params(axis='x', rotation=rotation, labelsize=tick_fontsize, pad=8)
+    plt.setp(ax_chart.xaxis.get_majorticklabels(), ha='center', rotation_mode='anchor')
     
-    # ========== WARNA MERAH UNTUK WEEKEND ==========
-    # Set warna label berdasarkan weekend atau bukan
     for i, (tick_label, date) in enumerate(zip(ax_chart.xaxis.get_ticklabels(), dates_list)):
-        if date.weekday() >= 5:  # Saturday (5) or Sunday (6)
+        if date.weekday() >= 5:
             tick_label.set_color('red')
             tick_label.set_fontweight('bold')
         else:
             tick_label.set_color('black')
     
-    ax_chart.set_xlabel('Date', fontsize=12, fontweight='bold', labelpad=15)  # Tambah labelpad
-    
-    # Add horizontal line at y=0
+    ax_chart.set_xlabel('Date', fontsize=12, fontweight='bold', labelpad=15)
     ax_chart.axhline(y=0, color='black', linewidth=1, zorder=2)
     
     # Prepare table data
@@ -536,16 +482,12 @@ def create_line_chart_matplotlib(df_filtered, filter_stores, all_stores, filter_
             row.append(int(val))
         table_data.append(row)
     
-    # Column labels
     col_labels = ['Coupon Name'] + [date.strftime('%d-%b') for date in dates_list]
     
-    # ========== REVISI: Sesuaikan lebar kolom tabel ==========
-    # Hitung lebar kolom secara dinamis
     coupon_col_width = 0.18
     remaining_width = 0.82
     date_col_width = remaining_width / num_dates if num_dates > 0 else 0.05
     
-    # Create table
     table = ax_table.table(
         cellText=table_data,
         colLabels=col_labels,
@@ -554,10 +496,8 @@ def create_line_chart_matplotlib(df_filtered, filter_stores, all_stores, filter_
         colWidths=[coupon_col_width] + [date_col_width] * len(dates_list)
     )
     
-    # Style table
     table.auto_set_font_size(False)
     
-    # Sesuaikan font size tabel berdasarkan jumlah kolom
     if num_dates <= 15:
         table_fontsize = 9
     elif num_dates <= 25:
@@ -568,7 +508,6 @@ def create_line_chart_matplotlib(df_filtered, filter_stores, all_stores, filter_
     table.set_fontsize(table_fontsize)
     table.scale(1, 2.2)
     
-    # Header styling
     for i in range(len(col_labels)):
         cell = table[(0, i)]
         cell.set_facecolor('#40E0D0')
@@ -576,7 +515,6 @@ def create_line_chart_matplotlib(df_filtered, filter_stores, all_stores, filter_
         cell.set_edgecolor('white')
         cell.set_linewidth(2)
     
-    # Row styling (alternating colors)
     for i in range(len(table_data)):
         for j in range(len(col_labels)):
             cell = table[(i+1, j)]
@@ -587,15 +525,12 @@ def create_line_chart_matplotlib(df_filtered, filter_stores, all_stores, filter_
             cell.set_edgecolor('white')
             cell.set_linewidth(1)
     
-    # Remove table axes
     ax_table.axis('off')
     ax_table.set_xlim(0, 1)
     ax_table.set_ylim(0, 1)
     
-    # Adjust overall layout
     plt.subplots_adjust(left=0.05, right=0.88, top=0.95, bottom=0.08)
     
-    # Save to BytesIO
     buf = BytesIO()
     plt.savefig(buf, format='png', dpi=150, bbox_inches='tight', pad_inches=0.2)
     buf.seek(0)
@@ -605,10 +540,8 @@ def create_line_chart_matplotlib(df_filtered, filter_stores, all_stores, filter_
 
 def create_pivot_table(df_filtered):
     """Create pivot table: StrCd | StrNm | Coupon columns"""
-    # Group by store and coupon
     pivot = df_filtered.groupby(['StrCd', 'StrNm', 'CpnNm'])['Qty'].sum().reset_index()
     
-    # Pivot to wide format
     pivot_wide = pivot.pivot_table(
         values='Qty',
         index=['StrCd', 'StrNm'],
@@ -617,11 +550,9 @@ def create_pivot_table(df_filtered):
         fill_value=0
     ).reset_index()
     
-    # Add total column
     coupon_cols = [col for col in pivot_wide.columns if col not in ['StrCd', 'StrNm']]
     pivot_wide['TOTAL'] = pivot_wide[coupon_cols].sum(axis=1)
     
-    # Add grand total row
     total_row = pd.DataFrame({
         'StrCd': ['TOTAL'],
         'StrNm': [''],
@@ -635,15 +566,12 @@ def create_pivot_table(df_filtered):
 
 # Main App
 def main():
-    # Header
     st.markdown('<div class="main-header">📊 LSI Coupon Statistics Dashboard</div>', unsafe_allow_html=True)
     st.markdown("---")
     
-    # Sidebar
     with st.sidebar:
         st.header("⚙️ Filter & Settings")
         
-        # File uploader
         uploaded_file = st.file_uploader(
             "📂 Upload Excel File",
             type=['xlsx', 'xls'],
@@ -654,14 +582,12 @@ def main():
             st.info("👆 Please upload an Excel file to begin")
             st.stop()
         
-        # Load data
         df = load_data(uploaded_file)
         
         st.success(f"✅ Loaded {len(df):,} records")
         
         st.markdown("---")
         
-        # Date range
         st.subheader("📅 Date Range")
         min_date = df['SaleDy'].min().date()
         max_date = df['SaleDy'].max().date()
@@ -675,7 +601,6 @@ def main():
         
         st.markdown("---")
         
-        # Store filter
         st.subheader("🏪 Store Filter")
         all_stores = sorted(df['StrNm'].unique())
         
@@ -692,7 +617,6 @@ def main():
         
         st.markdown("---")
         
-        # Coupon filter
         st.subheader("🎫 Coupon Filter")
         filter_mode = st.radio(
             "Filter Mode",
@@ -727,10 +651,8 @@ def main():
         - Export to Excel
         """)
     
-    # Apply filters
     df_filtered = filter_data(df, filter_stores, filter_mode, coupon_keywords, selected_coupons, date_range)
     
-    # Metrics
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
@@ -760,7 +682,6 @@ def main():
     
     st.markdown("---")
     
-    # Tabs
     tab1, tab2, tab3, tab4 = st.tabs([
         "📈 Line Chart & Table",
         "📊 Pivot Table (Store View)",
@@ -768,14 +689,12 @@ def main():
         "💾 Export"
     ])
 
-    # Tab 1: Line Chart
     with tab1:
         st.subheader("📈 Daily Coupon Usage Trend")
         
         if len(df_filtered) == 0:
             st.warning("No data to display with current filters")
         else:
-            # Choose visualization mode
             viz_mode = st.radio(
                 "Visualization Mode:",
                 options=["Interactive", "Static"],
@@ -784,13 +703,11 @@ def main():
             
             if viz_mode == "Interactive":
                 try:
-                    # PLOTLY VERSION - Interactive
                     fig = create_line_chart_plotly(df_filtered, filter_stores, all_stores, filter_mode, coupon_keywords, selected_coupons)
                     st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': True})
                     
                     st.markdown("---")
                     
-                    # Data Table below
                     st.subheader("📊 Daily Data Table")
                     data_table = create_data_table_df(df_filtered)
                     
@@ -802,7 +719,6 @@ def main():
                         height=400
                     )
                     
-                    # Download table as Excel
                     output = io.BytesIO()
                     with pd.ExcelWriter(output, engine='openpyxl') as writer:
                         data_table.to_excel(writer, sheet_name='Daily_Data', index=False)
@@ -818,16 +734,14 @@ def main():
                 except Exception as e:
                     st.error(f"Error creating chart: {str(e)}")
             
-            else:  # Static - Matplotlib
+            else:
                 try:
                     st.info("💡 Weekend days are highlighted with orange borders.")
                     
-                    # MATPLOTLIB VERSION - Perfect alignment
                     img_buf = create_line_chart_matplotlib(df_filtered, filter_stores, all_stores, filter_mode, coupon_keywords, selected_coupons)
                     
                     st.image(img_buf, use_column_width=True)
                     
-                    # Download button
                     st.download_button(
                         label="📥 Download Chart + Table (PNG)",
                         data=img_buf,
@@ -840,7 +754,6 @@ def main():
                     import traceback
                     st.code(traceback.format_exc())
     
-    # Tab 2: Pivot Table
     with tab2:
         st.subheader("Pivot Table: Store × Coupon")
         st.markdown("**Structure:** StrCd | StrNm | [Coupon Columns] | TOTAL")
@@ -850,7 +763,6 @@ def main():
         else:
             pivot_df = create_pivot_table(df_filtered)
             
-            # Style the dataframe
             def highlight_total_row(row):
                 if row['StrCd'] == 'TOTAL':
                     return ['background-color: #ffffcc; font-weight: bold'] * len(row)
@@ -862,7 +774,6 @@ def main():
             
             st.dataframe(styled_df, use_container_width=True, height=600)
             
-            # Download button - Excel
             output = io.BytesIO()
             with pd.ExcelWriter(output, engine='openpyxl') as writer:
                 pivot_df.to_excel(writer, sheet_name='Pivot_Table', index=False)
@@ -875,23 +786,19 @@ def main():
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
     
-    # Tab 3: Data Detail
     with tab3:
         st.subheader("Filtered Data Detail")
         
         if len(df_filtered) == 0:
             st.warning("No data to display with current filters")
         else:
-            # Show summary
             st.markdown(f"**Showing {len(df_filtered):,} records**")
             
-            # Display dataframe
             display_df = df_filtered.copy()
             display_df['SaleDy'] = display_df['SaleDy'].dt.strftime('%Y-%m-%d')
             
             st.dataframe(display_df, use_container_width=True, height=600)
             
-            # Download button - Excel
             output = io.BytesIO()
             with pd.ExcelWriter(output, engine='openpyxl') as writer:
                 display_df.to_excel(writer, sheet_name='Filtered_Data', index=False)
@@ -904,7 +811,6 @@ def main():
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
     
-    # Tab 4: Export
     with tab4:
         st.subheader("Export Options")
         
@@ -922,24 +828,19 @@ def main():
             
             if st.button("🔄 Generate Complete Excel File", type="primary"):
                 with st.spinner("Generating Excel file..."):
-                    # Create Excel file
                     output = io.BytesIO()
                     with pd.ExcelWriter(output, engine='openpyxl') as writer:
-                        # Sheet 1: Filtered data
                         df_export = df_filtered.copy()
                         df_export['SaleDy'] = df_export['SaleDy'].dt.strftime('%Y-%m-%d')
                         df_export.to_excel(writer, sheet_name='Filtered_Data', index=False)
                         
-                        # Sheet 2: Pivot table
                         pivot_df = create_pivot_table(df_filtered)
                         pivot_df.to_excel(writer, sheet_name='Pivot_Store_Coupon', index=False)
                         
-                        # Sheet 3: Daily trend
                         daily_summary = df_filtered.groupby(['SaleDy', 'CpnNm'])['Qty'].sum().reset_index()
                         daily_summary['SaleDy'] = daily_summary['SaleDy'].dt.strftime('%Y-%m-%d')
                         daily_summary.to_excel(writer, sheet_name='Daily_Trend', index=False)
                         
-                        # Sheet 4: Summary stats
                         summary = pd.DataFrame({
                             'Metric': ['Total Records', 'Total Qty', 'Unique Stores', 'Unique Coupons', 'Date Range'],
                             'Value': [
